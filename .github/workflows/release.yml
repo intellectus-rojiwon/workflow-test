@@ -45,6 +45,9 @@ jobs:
     outputs:
       name: ${{ steps.setup.outputs.name }}
       version: ${{ steps.setup.outputs.version }}
+      aws-access-key-id: ${{ steps.credentials.outputs.aws-access-key-id }}
+      aws-secret-access-key: ${{ steps.credentials.outputs.aws-secret-access-key }}
+      aws-session-token: ${{ steps.credentials.outputs.aws-session-token }}
 
     steps:
       - name: Checkout 🛎️
@@ -68,11 +71,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Log User Arn
-        run: |
-          aws sts get-caller-identity --query 'Arn'
-          echo ${{ steps.credentials.outputs.aws-account-id }}
-          echo ${{ steps.credentials.outputs.aws-access-key-id }}
-          echo ${{ steps.credentials.outputs.aws-secret-access-key }}
+        run: aws sts get-caller-identity --query 'Arn'
 
   image:
     runs-on: ubuntu-latest
@@ -80,15 +79,15 @@ jobs:
       - project
     outputs:
       uri: ${{ steps.ecr.outputs.registry }}/${{ needs.project.outputs.name }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ needs.project.outputs.aws-access-key-id }}
+      AWS_SECRET_ACCESS_KEY: ${{ needs.project.outputs.aws-secret-access-key }}
+      AWS_SESSION_TOKEN: ${{ needs.project.outputs.aws-session-token }}
 
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@main
-
-      - name: Configure AWS credentials 🔒
-        uses: aws-actions/configure-aws-credentials@main
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Login to Amazon ECR 🔒
         id: ecr
@@ -133,15 +132,15 @@ jobs:
     needs:
       - project
       - image
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ needs.project.outputs.aws-access-key-id }}
+      AWS_SECRET_ACCESS_KEY: ${{ needs.project.outputs.aws-secret-access-key }}
+      AWS_SESSION_TOKEN: ${{ needs.project.outputs.aws-session-token }}
 
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@main
-
-      - name: Configure AWS credentials 🔒
-        uses: aws-actions/configure-aws-credentials@main
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Lambda Deploy
         run: |
@@ -171,6 +170,11 @@ jobs:
     needs:
       - project
       - image
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ needs.project.outputs.aws-access-key-id }}
+      AWS_SECRET_ACCESS_KEY: ${{ needs.project.outputs.aws-secret-access-key }}
+      AWS_SESSION_TOKEN: ${{ needs.project.outputs.aws-session-token }}
 
     steps:
       - name: Checkout 🛎️
