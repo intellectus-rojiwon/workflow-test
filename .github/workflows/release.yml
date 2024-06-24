@@ -56,13 +56,13 @@ jobs:
           echo "name=${${{ github.repository }}##*/}" >> $GITHUB_ENV
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_ENV
+          echo "::notice title=test::this is test message"
 
   image:
     if: github.event.inputs.image == 'true'
     runs-on: ubuntu-latest
     needs:
       - project
-
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Checkout 🛎️
@@ -84,16 +84,19 @@ jobs:
           aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ vars.AWS_REGION }}
 
       - name: Build & Push Docker Image ✨
-        id: image
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          if ! aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=$IMAGE_TAG > /dev/null 2>&1; then
+            docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+            docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          fi
+
           if [ ${{ github.event.inputs.development }} == "true" ]; then
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:dev
+            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:dev
             docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev
           fi
+
           if [ ${{ github.event.inputs.production }} == "true" ]; then
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:prod
+            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:prod
             docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod
           fi
         env:
@@ -102,10 +105,10 @@ jobs:
           IMAGE_TAG: ${{ needs.project.outputs.version }}
 
   lambda:
+    if: github.event.inputs.lambda == 'true'
     runs-on: ubuntu-latest
     needs:
       - project
-
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Checkout 🛎️
@@ -174,6 +177,7 @@ jobs:
             aws lambda get-function-url-config --function-name ${{ needs.project.outputs.name }}-dev || \
             aws lambda create-function-url-config --function-name ${{ needs.project.outputs.name }}-dev
           fi
+
           if [ ${{ github.event.inputs.production }} == 'true' && ${{ steps.prod.conclusion }} == 'success' ]; then
             aws lambda get-function-url-config --function-name ${{ needs.project.outputs.name }}-prod || \
             aws lambda create-function-url-config --function-name ${{ needs.project.outputs.name }}-prod
