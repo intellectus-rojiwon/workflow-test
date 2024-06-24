@@ -47,7 +47,6 @@ jobs:
       version: ${{ steps.setup.outputs.version }}
       aws-access-key-id: ${{ steps.credentials.outputs.aws-access-key-id }}
       aws-secret-access-key: ${{ steps.credentials.outputs.aws-secret-access-key }}
-      aws-session-token: ${{ steps.credentials.outputs.aws-session-token }}
 
     steps:
       - name: Checkout 🛎️
@@ -86,7 +85,6 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           aws-access-key-id: ${{ needs.project.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ needs.project.outputs.aws-secret-access-key }}
-          aws-session-token: ${{ needs.project.outputs.aws-session-token }}
 
       - name: Login to Amazon ECR 🔒
         id: ecr
@@ -131,6 +129,7 @@ jobs:
     needs:
       - project
       - image
+
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@main
@@ -141,7 +140,6 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           aws-access-key-id: ${{ needs.project.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ needs.project.outputs.aws-secret-access-key }}
-          aws-session-token: ${{ needs.project.outputs.aws-session-token }}
 
       - name: Lambda Deploy
         run: |
@@ -171,6 +169,7 @@ jobs:
     needs:
       - project
       - image
+
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@main
@@ -181,7 +180,6 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           aws-access-key-id: ${{ needs.project.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ needs.project.outputs.aws-secret-access-key }}
-          aws-session-token: ${{ needs.project.outputs.aws-session-token }}
 
       - name: Lambda Deploy
         id: function
