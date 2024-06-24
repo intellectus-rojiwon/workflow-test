@@ -79,7 +79,9 @@ jobs:
         uses: aws-actions/amazon-ecr-login@main
 
       - name: Check Repository
-        run: aws ecr describe-repositories --repository-name ${{ needs.project.outputs.name }}
+        run: |
+          aws ecr describe-repositories --repository-names ${{ needs.project.outputs.name }} || \
+          aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ vars.AWS_REGION }}
 
       - name: Build & Push Docker Image ✨
         id: image
@@ -125,7 +127,7 @@ jobs:
         run: |
           aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI --query 'Version' --output text || \
           aws lambda create-function --function-name $FUNCTION_NAME --package-type Image --code ImageUri=$IMAGE_URI \
-          --role ${{ vars.AWS_LAMBDA_DEV_ROLE }} --region ${{ vars.AWS_LAMBDA_DEV_REGION }} \
+          --region ${{ vars.AWS_REGION }} \
           --memory-size 1024 --runtime nodejs20.x --architectures x86_64 --ephemeral-storage Size=512 \
           --timeout 6 --query 'Version' --output text
         env:
@@ -140,8 +142,7 @@ jobs:
           aws lambda create-function \
             --function-name $FUNCTION_NAME \
             --package-type Image --code ImageUri=$IMAGE_URI \
-            --role ${{ vars.AWS_LAMBDA_PROD_ROLE }} \
-            --region ${{ vars.AWS_LAMBDA_PROD_REGION }} \
+            --region ${{ vars.AWS_REGION }} \
             --architectures x86_64 \
             --runtime nodejs20.x \
             --memory-size 4096 \
