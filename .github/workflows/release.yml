@@ -64,7 +64,7 @@ jobs:
         run: aws sts get-caller-identity --query 'Arn'
 
       - name: "Docker Image 🐳"
-        uses: intellectus-rojiwon/workflow-test/.github/workflows/image.yml@main
+        uses: ./.github/workflows/image.yml@main
         id: image
         with:
           development: ${{ github.event.inputs.development }}
@@ -77,8 +77,7 @@ jobs:
           aws-secret-access-key: ${{ steps.credentials.aws-secret-access-key }}
 
       - name: "Lambda Function 🤖"
-        uses: intellectus-rojiwon/workflow-test/.github/workflows/lambda.yml@main
-        id: lambda
+        uses: ./.github/workflows/lambda.yml@main
         with:
           development: ${{ github.event.inputs.development }}
           production: ${{ github.event.inputs.production }}
