@@ -1,0 +1,63 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Release 🔖
+
+# Controls when the workflow will run
+on:
+  workflow_dispatch:
+    inputs:
+      development:
+        description: stage 개발 버전 업데이트
+        required: true
+        default: true
+        type: boolean
+      production:
+        description: stage 배포 버전 업데이트
+        required: true
+        default: false
+        type: boolean
+      release-note: # 버전만 고려
+        required: true
+        default: false
+        type: boolean
+      image: # stage마다 각각 람다함수는 따로 갖는다, development, production tag 부여
+        description: 이미지 배포 실행, 버전 태그는 덮어쓰지 않는다.
+        required: true
+        default: false
+        type: boolean
+      lambda:
+        required: true
+        default: true
+        type: boolean
+      swagger: # 항상 업데이트
+        required: true
+        default: false
+        type: boolean
+      sdk: # 버전별 배포, development, production tag 부여, npm view 명령어로 기존 버전 배포 유무 확인
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+    id-token: write
+    contents: write
+    packages: write
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@main
+
+      # Runs a single command using the runners shell
+      - name: Run a one-line script
+        run: echo Hello, world!
+
+      # Runs a set of commands using the runners shell
+      - name: Run a multi-line script
+        run: |
+          echo Add other actions to build,
+          echo test, and deploy your project.
