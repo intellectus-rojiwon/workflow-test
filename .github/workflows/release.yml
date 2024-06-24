@@ -7,17 +7,17 @@ on:
   workflow_dispatch:
     inputs:
       development:
-        description: stage 개발 버전 업데이트
+        description: Development Stage
         required: true
         default: true
         type: boolean
       production:
-        description: stage 배포 버전 업데이트
+        description: Production Stage
         required: true
         default: false
         type: boolean
       image: # stage마다 각각 람다함수는 따로 갖는다, development, production tag 부여
-        description: 이미지 배포 실행, 버전 태그는 덮어쓰지 않는다.
+        description: ECR Docker Image
         required: true
         default: false
         type: boolean
