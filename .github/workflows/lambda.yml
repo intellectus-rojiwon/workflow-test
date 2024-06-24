@@ -1,0 +1,106 @@
+name: Lambda Function 🤖
+
+on:
+  workflow_call:
+    inputs:
+      development:
+        required: true
+        default: true
+        type: boolean
+      production:
+        required: true
+        default: false
+        type: boolean
+      project:
+        required: true
+        type: string
+      image_uri:
+        required: true
+        type: string
+    secrets:
+      aws-access-key-id:
+        required: true
+      aws-secret-access-key:
+        required: true
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
+
+jobs:
+  development:
+    if: github.event.inputs.development == 'true'
+    runs-on: ubuntu-latest
+    env:
+      FUNCTION_NAME: ${{ github.event.inputs.project }}-dev
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@main
+
+      - name: Deploy Lambda Function
+        run: |
+          LAMBDA_VERSION=$(aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI --query 'Version' --output text || \
+            aws lambda create-function --function-name $FUNCTION_NAME --package-type Image --code ImageUri=$IMAGE_URI \
+              --region ${{ env.AWS_REGION }} \
+              --memory-size 1024 --runtime nodejs20.x --architectures x86_64 --ephemeral-storage Size=512 \
+              --timeout 6 --query 'Version' --output text)
+
+          echo "::notice title=Lambda Deployed::$FUNCTION_NAME:$LAMBDA_VERSION"
+        env:
+          IMAGE_URI: ${{ github.event.inputs.image_uri  }}:dev
+
+      - name: Update Lambda URL
+        run: |
+          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text || \
+          aws lambda create-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text)
+
+          echo "::notice title=(Development) Host::$FUNCTION_HOST"
+
+  production:
+    if: github.event.inputs.production == 'true'
+    runs-on: ubuntu-latest
+    env:
+      FUNCTION_NAME: ${{ github.event.inputs.project }}-prod
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@main
+
+      - name: Lambda Deploy
+        id: function
+        run: |
+          LAMBDA_VERSION=$(aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI --query 'Version' --output text || \
+            aws lambda create-function \
+              --function-name $FUNCTION_NAME \
+              --package-type Image --code ImageUri=$IMAGE_URI \
+              --region ${{ env.AWS_REGION }} \
+              --architectures x86_64 \
+              --runtime nodejs20.x \
+              --memory-size 4096 \
+              --ephemeral-storage Size=512 \
+              --timeout 30 \
+              --query 'Version' --output text)
+
+          echo "::notice title=Lambda Deployed::$FUNCTION_NAME:$LAMBDA_VERSION"
+          echo "version=$LAMBDA_VERSION" >> $GITHUB_ENV
+        env:
+          IMAGE_URI: ${{ github.event.inputs.image_uri  }}:prod
+
+      - name: Provisioned Concurrency
+        run: |
+          aws lambda update-alias --function-name $FUNCTION_NAME --name provisioned --function-version ${{ steps.function.outputs.version }} || \
+          aws lambda create-alias --function-name $FUNCTION_NAME --name provisioned --function-version ${{ steps.function.outputs.version }}
+
+          aws lambda put-provisioned-concurrency-config \
+            --function-name $FUNCTION_NAME \
+            --qualifier provisioned
+            --provisioned-concurrent-executions 3
+
+      - name: Update Lambda URL
+        run: |
+          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text || \
+          aws lambda create-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text)
+
+          echo "::notice title=(Production) Host::$FUNCTION_HOST"

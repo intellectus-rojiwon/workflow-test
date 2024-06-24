@@ -1,0 +1,86 @@
+name: Docker Image 🐳
+
+on:
+  workflow_call:
+    inputs:
+      development:
+        required: true
+        default: true
+        type: boolean
+      production:
+        required: true
+        default: false
+        type: boolean
+      image:
+        required: true
+        default: false
+        type: boolean
+      project:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+    secrets:
+      aws-access-key-id:
+        required: true
+      aws-secret-access-key:
+        required: true
+    outputs:
+      registry:
+        value: ${{ jobs.image.outputs.registry }}
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      registry: ${{ steps.ecr.outputs.registry }}
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@main
+
+      - name: Login to Amazon ECR 🔒
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@main
+
+      - name: Init Repository
+        run: |
+          aws ecr describe-repositories --repository-names ${{ github.event.inputs.project }} || \
+          aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ env.AWS_REGION }}
+
+      - name: Build & Push Docker Image ✨
+        if: github.event.inputs.image == 'true'
+        run: |
+          if ! aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=$IMAGE_TAG > /dev/null 2>&1; then
+            docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+            docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          fi
+
+          if [ ${{ github.event.inputs.development }} == "true" ]; then
+            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:dev
+            docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev
+
+            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:dev"
+          fi
+
+          if [ ${{ github.event.inputs.production }} == "true" ]; then
+            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:prod
+            docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod
+
+            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:prod"
+          fi
+        env:
+          ECR_REPOSITORY: ${{ github.event.inputs.project }}
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.event.inputs.version }}

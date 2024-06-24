@@ -7,17 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       development:
-        description: Development Stage
         required: true
         default: true
         type: boolean
       production:
-        description: Production Stage
         required: true
         default: false
         type: boolean
-      image: # stage마다 각각 람다함수는 따로 갖는다, development, production tag 부여
-        description: ECR Docker Image
+      image:
         required: true
         default: false
         type: boolean
@@ -25,33 +22,28 @@ on:
         required: true
         default: true
         type: boolean
-      swagger: # 항상 업데이트
+      swagger:
         required: true
         default: false
         type: boolean
-      sdk: # 버전별 배포, development, production tag 부여, npm view 명령어로 기존 버전 배포 유무 확인
+      sdk:
         required: true
         default: false
         type: boolean
 
 permissions:
-  id-token: write
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
-  project:
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      name: ${{ steps.setup.outputs.name }}
-      version: ${{ steps.setup.outputs.version }}
 
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@main
 
       - name: project info
-        id: setup
+        id: project
         run: |
           NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)
           VERSION=$(node -p "require('./package.json').version")
@@ -69,154 +61,29 @@ jobs:
           output-credentials: true
 
       - name: Log User Arn
-        run: |
-          aws sts get-caller-identity --query 'Arn'
-          cat ~/.aws/credentials
+        run: aws sts get-caller-identity --query 'Arn'
 
-  image:
-    runs-on: ubuntu-latest
-    needs:
-      - project
-    outputs:
-      uri: ${{ steps.ecr.outputs.registry }}/${{ needs.project.outputs.name }}
-    env:
-      AWS_REGION: ${{ vars.AWS_REGION }}
-
-    steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@main
-
-      - name: Login to Amazon ECR 🔒
-        id: ecr
-        uses: aws-actions/amazon-ecr-login@main
-
-      - name: Check Repository
-        run: |
-          aws ecr describe-repositories --repository-names ${{ needs.project.outputs.name }} || \
-          aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ vars.AWS_REGION }}
-
-      - name: Build & Push Docker Image ✨
-        if: github.event.inputs.image == 'true'
-        run: |
-          if ! aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=$IMAGE_TAG > /dev/null 2>&1; then
-            docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          fi
-
-          if [ ${{ github.event.inputs.development }} == "true" ]; then
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:dev
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev
-
-            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:dev"
-          fi
-
-          if [ ${{ github.event.inputs.production }} == "true" ]; then
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:prod
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod
-
-            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:prod"
-          fi
-        env:
-          ECR_REPOSITORY: ${{ needs.project.outputs.name }}
-          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG: ${{ needs.project.outputs.version }}
-
-  lambda_development:
-    if: github.event.inputs.lambda == 'true' && github.event.inputs.development == 'true'
-    runs-on: ubuntu-latest
-    needs:
-      - project
-      - image
-    env:
-      AWS_REGION: ${{ vars.AWS_REGION }}
-
-    steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@main
-
-      - name: Lambda Deploy
-        run: |
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI --query 'Version' --output text || \
-            aws lambda create-function --function-name $FUNCTION_NAME --package-type Image --code ImageUri=$IMAGE_URI \
-              --region ${{ vars.AWS_REGION }} \
-              --memory-size 1024 --runtime nodejs20.x --architectures x86_64 --ephemeral-storage Size=512 \
-              --timeout 6 --query 'Version' --output text)
-
-          echo "::notice title=Lambda Deployed::$FUNCTION_NAME:$LAMBDA_VERSION"
-        env:
-          FUNCTION_NAME: ${{ needs.project.outputs.name }}-dev
-          IMAGE_URI: ${{ needs.image.outputs.uri }}:dev
-
-      - name: Update Lambda URL
-        run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text || \
-          aws lambda create-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text)
-
-          echo "::notice title=Development Host::$FUNCTION_HOST"
-        env:
-          FUNCTION_NAME: ${{ needs.project.outputs.name }}-dev
-
-  lambda_production:
-    if: github.event.inputs.lambda == 'true' && github.event.inputs.production == 'true'
-    runs-on: ubuntu-latest
-    needs:
-      - project
-      - image
-    env:
-      AWS_REGION: ${{ vars.AWS_REGION }}
-
-    steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@main
-
-      - name: Configure AWS credentials 🔒
-        uses: aws-actions/configure-aws-credentials@main
+      - name: "Docker Image 🐳"
+        uses: intellectus-rojiwon/workflow-test/.github/workflows/image.yml@main
+        id: image
         with:
-          aws-region: ${{ vars.AWS_REGION }}
+          development: ${{ github.event.inputs.development }}
+          production: ${{ github.event.inputs.production }}
+          image: ${{ github.event.inputs.image }}
+          project: ${{ steps.project.outputs.name }}
+          version: ${{ steps.project.outputs.version }}
+        secrets:
+          aws-access-key-id: ${{ steps.credentials.aws-access-key-id }}
+          aws-secret-access-key: ${{ steps.credentials.aws-secret-access-key }}
 
-      - name: Lambda Deploy
-        id: function
-        run: |
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI --query 'Version' --output text || \
-            aws lambda create-function \
-              --function-name $FUNCTION_NAME \
-              --package-type Image --code ImageUri=$IMAGE_URI \
-              --region ${{ vars.AWS_REGION }} \
-              --architectures x86_64 \
-              --runtime nodejs20.x \
-              --memory-size 4096 \
-              --ephemeral-storage Size=512 \
-              --timeout 30 \
-              --query 'Version' --output text)
-
-          echo "::notice title=Lambda Deployed::$FUNCTION_NAME:$LAMBDA_VERSION"
-          echo "version=$LAMBDA_VERSION" >> $GITHUB_ENV
-        env:
-          FUNCTION_NAME: ${{ needs.project.outputs.name }}-prod
-          IMAGE_URI: ${{ needs.image.outputs.uri  }}:prod
-
-      - name: Provisioned Concurrency
-        run: |
-          aws lambda update-alias --function-name $FUNCTION_NAME --name provisioned --function-version ${{ steps.function.outputs.version }} || \
-          aws lambda create-alias --function-name $FUNCTION_NAME --name provisioned --function-version ${{ steps.function.outputs.version }}
-
-          aws lambda put-provisioned-concurrency-config \
-            --function-name $FUNCTION_NAME \
-            --qualifier provisioned
-            --provisioned-concurrent-executions 3
-        env:
-          FUNCTION_NAME: ${{ needs.project.outputs.name }}-prod
-
-      - name: Update Lambda URL
-        run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text || \
-          aws lambda create-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text)
-
-          echo "::notice title=Development Host::$FUNCTION_HOST"
-        env:
-          FUNCTION_NAME: ${{ needs.project.outputs.name }}-prod
-
-  # 버전에 해당하는 Release note, npm lib 없다면 배포
-  # npm tag만 별도로 업데이트
+      - name: "Lambda Function 🤖"
+        uses: intellectus-rojiwon/workflow-test/.github/workflows/lambda.yml@main
+        id: lambda
+        with:
+          development: ${{ github.event.inputs.development }}
+          production: ${{ github.event.inputs.production }}
+          project: ${{ steps.project.outputs.name }}
+          image_uri: ${{ steps.image.outputs.registry }}/${{ steps.project.outputs.name }}
+        secrets:
+          aws-access-key-id: ${{ steps.credentials.aws-access-key-id }}
+          aws-secret-access-key: ${{ steps.credentials.aws-secret-access-key }}
