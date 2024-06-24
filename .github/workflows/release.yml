@@ -45,8 +45,6 @@ jobs:
     outputs:
       name: ${{ steps.setup.outputs.name }}
       version: ${{ steps.setup.outputs.version }}
-      aws-access-key-id: ${{ steps.credentials.outputs.aws-access-key-id }}
-      aws-secret-access-key: ${{ steps.credentials.outputs.aws-secret-access-key }}
 
     steps:
       - name: Checkout 🛎️
@@ -55,11 +53,12 @@ jobs:
       - name: project info
         id: setup
         run: |
-          echo "name=$(echo ${{ github.repository }} | cut -d '/' -f 2)" >> $GITHUB_ENV
+          NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)
           VERSION=$(node -p "require('./package.json').version")
+          echo "name=$NAME" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_ENV
 
-          echo "::notice title=Project Info::$name:$version"
+          echo "::notice title=Project Info::$NAME:$VERSION"
 
       - name: Configure AWS credentials 🔒
         id: credentials
@@ -67,6 +66,13 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE }}
           aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log User Arn
+        run: |
+          aws sts get-caller-identity --query 'Arn'
+          echo ${{ steps.credentials.outputs.aws-account-id }}
+          echo ${{ steps.credentials.outputs.aws-access-key-id }}
+          echo ${{ steps.credentials.outputs.aws-secret-access-key }}
 
   image:
     runs-on: ubuntu-latest
@@ -83,8 +89,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@main
         with:
           aws-region: ${{ vars.AWS_REGION }}
-          aws-access-key-id: ${{ needs.project.outputs.aws-access-key-id }}
-          aws-secret-access-key: ${{ needs.project.outputs.aws-secret-access-key }}
 
       - name: Login to Amazon ECR 🔒
         id: ecr
@@ -138,8 +142,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@main
         with:
           aws-region: ${{ vars.AWS_REGION }}
-          aws-access-key-id: ${{ needs.project.outputs.aws-access-key-id }}
-          aws-secret-access-key: ${{ needs.project.outputs.aws-secret-access-key }}
 
       - name: Lambda Deploy
         run: |
@@ -178,8 +180,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@main
         with:
           aws-region: ${{ vars.AWS_REGION }}
-          aws-access-key-id: ${{ needs.project.outputs.aws-access-key-id }}
-          aws-secret-access-key: ${{ needs.project.outputs.aws-secret-access-key }}
 
       - name: Lambda Deploy
         id: function
