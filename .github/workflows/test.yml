@@ -1,0 +1,23 @@
+name: Ttest
+
+on:
+  workflow_dispatch:
+    inputs:
+      string:
+        required: true
+        type: string
+      bool:
+        required: true
+        type: boolean
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: test
+        run: |
+          echo "::notice title=Input Test::${{ inputs.string }}"
+          echo "::notice title=Input Test::${{ inputs.bool }}"
+          echo "::notice title=Input Test::${{ inputs.bool == 'true' }}"
+          echo "::notice title=Input Test::${{ inputs.bool == true }}"
