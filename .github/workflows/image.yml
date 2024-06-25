@@ -3,11 +3,17 @@ name: Docker Image 🐳
 on:
   workflow_call:
     inputs:
-      repository:
+      aws_region:
         required: true
         type: string
-      region:
+      role_to_assume:
         required: true
+        type: string
+      ecr_repository:
+        required: true
+        type: string
+      ecr_aws_region:
+        required: false
         type: string
       version:
         required: true
@@ -21,11 +27,6 @@ on:
       push:
         required: true
         type: boolean
-    secrets:
-      role_to_assume:
-        required: true
-      aws_region:
-        required: true
     outputs:
       image_uri:
         value: ${{ jobs.build_and_push.outputs.image_uri }}
@@ -43,10 +44,8 @@ jobs:
       - name: Create Values
         id: value
         run: |
-          ROLE_SESSION_NAME=ECR-${{ inputs.repository }}-${{ inputs.version }}
+          ROLE_SESSION_NAME=ECR-${{ inputs.ecr_repository }}-${{ inputs.version }}
           ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
-
-          ${{ inputs.repository.default }}
 
           echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
           echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
@@ -54,8 +53,8 @@ jobs:
       - name: Configure AWS credentials 🔑
         uses: aws-actions/configure-aws-credentials@main
         with:
-          role-to-assume: ${{ secrets.role_to_assume }}
-          aws-region: ${{ secrets.aws_region }}
+          role-to-assume: ${{ inputs.role_to_assume }}
+          aws-region: ${{ inputs.aws_region }}
           role-session-name: ${{ steps.value.outputs.role_session_name }}
 
       - name: Login to Amazon ECR 🔑
@@ -65,14 +64,18 @@ jobs:
       - name: Init ECR Repository
         id: image
         run: |
-          REPOSITORY_NAME=${{ inputs.repository }}
-          REGION=${{ inputs.region }}
+          REPOSITORY_NAME=${{ inputs.ecr_repository }}
+          if [ -z ${{ inputs.ecr_aws_region }} ]; then
+            REGION=${{ inputs.aws_region }}
+          else
+            REGION=${{ inputs.ecr_aws_region }}
+          fi
 
           if ! aws ecr describe-repositories --repository-names $REPOSITORY_NAME 2>/dev/null; then
             aws ecr create-repository --repository-name $REPOSITORY_NAME --region $REGION
           fi
 
-          IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.repository }}
+          IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.ecr_repository }}
           echo "uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
 
           echo "::notice title=Docker Image URI::$IMAGE_URI"
@@ -82,7 +85,7 @@ jobs:
         run: |
           IMAGE_URI=${{ steps.image.outputs.uri }}
 
-          if ! aws ecr describe-images --repository-name ${{ inputs.repository }} --image-ids imageTag=${{ inputs.version }} > /dev/null 2>&1; then
+          if ! aws ecr describe-images --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.version }} > /dev/null 2>&1; then
             docker build -t $IMAGE_URI:${{ inputs.version }} .
             docker push $$IMAGE_URI:${{ inputs.version }}
             echo "::notice title=Image Created::$IMAGE_URI:${{ inputs.version }}"
@@ -102,7 +105,7 @@ jobs:
 
       - name: Revoke AWS Role Session 🔒
         run: |
-          ROLE_NAME=$(echo ${{ secrets.role_to_assume }} | cut -d '/' -f 2-)
+          ROLE_NAME=$(echo ${{ inputs.role_to_assume }} | cut -d '/' -f 2-)
           ROLE_SESSION_NAME=${{ steps.value.outputs.role_session_name }}
           CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") 
 

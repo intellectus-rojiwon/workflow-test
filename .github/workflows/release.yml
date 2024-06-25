@@ -66,13 +66,14 @@ jobs:
       - project
     uses: ./.github/workflows/image.yml
     with:
-      repository: ${{ needs.project.outputs.name }}
-      region: ap-northeast-2
+      aws_region: ${{ vars.AWS_REGION }}
+      role_to_assume: ${{ vars.AWS_ROLE }}
+      ecr_repository: ${{ needs.project.outputs.name }}
+      # ecr_aws_region: {{ vars.AWS_REGION }}
       version: ${{ needs.project.outputs.version }}
       development: ${{ inputs.development }}
       produnction: ${{ inputs.production }}
       push: ${{ inputs.image }}
-    secrets: inherit
 
   lambda_development:
     needs:
@@ -81,15 +82,16 @@ jobs:
     if: inputs.lambda == 'true' && inputs.development == 'true'
     uses: ./.github/workflows/lambda.yml
     with:
+      aws_region: ${{ vars.AWS_REGION }}
+      role_to_assume: ${{ vars.AWS_ROLE }}
       function_name: ${{ needs.project.outputs.name }}-dev
+      # function_aws_region: {{ vars.AWS_REGION }}
       image_uri: ${{ needs.image.outputs.image_uri }}:dev
-      region: ap-northeast-2
       memory: 1024
       runtime: nodejs20.x
       architectures: x86_64
       ephemeral_storage: 512
       timeout: 6
-    secrets: inherit
 
   lambda_production:
     needs:
@@ -98,12 +100,14 @@ jobs:
     if: inputs.lambda == 'true' && inputs.production == 'true'
     uses: ./.github/workflows/lambda.yml
     with:
+      aws_region: ${{ vars.AWS_REGION }}
+      role_to_assume: ${{ vars.AWS_ROLE }}
       function_name: ${{ needs.project.outputs.name }}-prod
+      # function_aws_region: {{ vars.AWS_REGION }}
       image_uri: ${{ needs.image.outputs.image_uri }}:prod
-      region: ap-northeast-2
       memory: 4096
       runtime: nodejs20.x
       architectures: x86_64
       ephemeral_storage: 512
       timeout: 30
-    secrets: inherit
+      provisioned_concurrency: 3

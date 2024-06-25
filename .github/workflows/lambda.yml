@@ -3,12 +3,20 @@ name: Lambda Function ƛ
 on:
   workflow_call:
     inputs:
+      aws_region: # ap-northeast-2
+        required: true
+        type: string
+      role_to_assume:
+        required: true
+        type: string
+
       function_name:
         required: true
         type: string
-      region: # ap-northeast-2
-        required: true
+      function_aws_region: # ap-northeast-2
+        required: false
         type: string
+
       image_uri: # include tag
         required: true
         type: string
@@ -27,15 +35,10 @@ on:
       timeout: # e.g. 6
         required: true
         type: number
+
       provisioned_concurrency: # 3
         required: false
         type: number
-
-    secrets:
-      role_to_assume:
-        required: true
-      aws_region:
-        required: true
 
 jobs:
   deploy:
@@ -57,18 +60,24 @@ jobs:
       - name: Configure AWS credentials 🔑
         uses: aws-actions/configure-aws-credentials@main
         with:
-          role-to-assume: ${{ secrets.role_to_assume }}
-          aws-region: ${{ secrets.aws_region }}
+          role-to-assume: ${{ inputs.role_to_assume }}
+          aws-region: ${{ inputs.aws_region }}
           role-session-name: ${{ steps.value.outputs.role_session_name }}
 
       - name: Deploy Lambda 📌
         id: function
         run: |
+          if [ -z ${{ inputs.function_aws_region }} ]; then
+            REGION=${{ inputs.aws_region }}
+          else
+            REGION=${{ inputs.function_aws_region }}
+          fi
+
           LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ inputs.function_name }} --image-uri ${{ inputs.image_uri }} --query 'Version' --output text || \
             aws lambda create-function \
               --function-name ${{ inputs.function_name }} \
               --package-type Image --code ImageUri=${{ inputs.image_uri }} \
-              --region ${{ inputs.region }} \
+              --region $REGION \
               --architectures ${{ inputs.architectures }} \
               --runtime ${{ inputs.runtime }} \
               --memory-size ${{ inputs.memory }} \
@@ -115,7 +124,7 @@ jobs:
 
       - name: Revoke AWS Role Session 🔒
         run: |
-          ROLE_NAME=$(echo ${{ secrets.role_to_assume }} | cut -d '/' -f 2-)
+          ROLE_NAME=$(echo ${{ inputs.role_to_assume }} | cut -d '/' -f 2-)
           ROLE_SESSION_NAME=${{ steps.value.outputs.role_session_name }}
           CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") 
 
