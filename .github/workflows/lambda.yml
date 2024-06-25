@@ -54,30 +54,80 @@ jobs:
           ROLE_SESSION_NAME=$Lambda-${{ inputs.function_name }}
           ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
 
-          echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
-
-      - name: Configure AWS credentials 🔑
-        uses: aws-actions/configure-aws-credentials@main
-        with:
-          role-to-assume: ${{ inputs.role_to_assume }}
-          aws-region: ${{ inputs.aws_region }}
-          role-session-name: ${{ steps.value.outputs.role_session_name }}
-
-      - name: Deploy Lambda 📌
-        id: function
-        run: |
           if [ -z "${{ inputs.function_aws_region }}" ]; then
             REGION=${{ inputs.aws_region }}
           else
             REGION=${{ inputs.function_aws_region }}
           fi
 
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ inputs.function_name }} --image-uri ${{ inputs.image_uri }} --query 'Version' --output text || \
+          echo "function_aws_region=$REGION" >> "$GITHUB_OUTPUT"
+          echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials 🔑
+        uses: aws-actions/configure-aws-credentials@main
+        id: aws
+        with:
+          role-to-assume: ${{ inputs.role_to_assume }}
+          aws-region: ${{ inputs.aws_region }}
+          role-session-name: ${{ steps.value.outputs.role_session_name }}
+          output-credentials: true
+
+      - name: Init Role for Lambda 🚨
+        id: role
+        run: |
+          INLINE_POLICY='{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "logs:CreateLogGroup",
+                "Resource": "arn:aws:logs:${{ steps.value.outputs.function_aws_region }}:${{ steps.aws.outputs.aws-account-id }}:*"
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "logs:CreateLogStream",
+                  "logs:PutLogEvents"
+                ],
+                "Resource": [
+                  "arn:aws:logs:${{ steps.value.outputs.function_aws_region }}:${{ steps.aws.outputs.aws-account-id }}:log-group:/aws/lambda/${{ inputs.function_name }}*"
+                ]
+              }
+            ]
+          }'
+
+          ASSUME_ROLE_POLICY='{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "lambda.amazonaws.com"  
+                },
+                "Action": "sts:AssumeRole"
+              } 
+            ]
+          }'
+
+          LAMBDA_ROLE_NAME=${{ inputs.function_name }}-${{ steps.value.outputs.function_aws_region }}-lambdaExecutionRole
+
+          if ! aws iam get-role --role-name $LAMBDA_ROLE_NAME 2>/dev/null; then
+            aws iam create-role --role-name $LAMBDA_ROLE_NAME --assume-role-policy-document "$ASSUME_ROLE_POLICY"
+            aws iam put-role-policy --role-name $LAMBDA_ROLE_NAME --policy-name "AWSLambdaBasicExecutionRolePolicy" --policy-document "$INLINE_POLICY"
+          fi
+
+          echo "name=$LAMBDA_ROLE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Lambda 📌
+        id: function
+        run: |
+          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ inputs.function_name }} --image-uri ${{ inputs.image_uri }} --region ${{ steps.value.outputs.function_aws_region }} --query 'Version' --output text || \
             aws lambda create-function \
               --function-name ${{ inputs.function_name }} \
               --package-type Image --code ImageUri=${{ inputs.image_uri }} \
-              --region $REGION \
+              --role ${{ steps.role.outputs.name }} \
+              --region ${{ steps.value.outputs.function_aws_region }} \
               --architectures ${{ inputs.architectures }} \
               --runtime ${{ inputs.runtime }} \
               --memory-size ${{ inputs.memory }} \
@@ -90,8 +140,8 @@ jobs:
 
       - name: Update Lambda URL 🛜
         run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --query 'FunctionUrl' --output text || \
-          aws lambda create-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --query 'FunctionUrl' --output text)
+          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --region ${{ steps.value.outputs.function_aws_region }} --query 'FunctionUrl' --output text || \
+          aws lambda create-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --region ${{ steps.value.outputs.function_aws_region }} --query 'FunctionUrl' --output text)
 
           echo "::notice title=Host::$FUNCTION_HOST"
 
@@ -113,14 +163,15 @@ jobs:
             echo "::error title=Provisioned Concurrency Input Missing::provisioned concurrency input is missinng."
           fi
 
-          if ! aws lambda update-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} 2>/dev/null; then
-            aws lambda create-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }}
+          if ! aws lambda update-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ steps.value.outputs.function_aws_region }} 2>/dev/null; then
+            aws lambda create-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ steps.value.outputs.function_aws_region }}
           fi
 
           aws lambda put-provisioned-concurrency-config \
             --function-name ${{ inputs.function_name }} \
             --qualifier provisioned \
-            --provisioned-concurrent-executions ${{ inputs.provisioned_concurrency }}
+            --provisioned-concurrent-executions ${{ inputs.provisioned_concurrency }} \
+            --region ${{ steps.value.outputs.function_aws_region }}
 
       - name: Revoke AWS Role Session 🔒
         run: |
