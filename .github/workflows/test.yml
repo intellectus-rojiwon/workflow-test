@@ -1,0 +1,28 @@
+name: Test 🐳
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ steps.image.outputs.uri }}
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@main
+
+      - name: Configure AWS credentials 🔑
+        uses: aws-actions/configure-aws-credentials@main
+        with:
+          role-to-assume: ${{ secrets.role_to_assume }}
+          aws-region: ap-northeast-2
+
+      - name: Login to Amazon ECR 🔑
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@main
+
+      - name: Init ECR Repository
+        id: image
+        run: echo "::notice title=ECR Regsitry::${{ steps.ecr.outputs.registry }}"
