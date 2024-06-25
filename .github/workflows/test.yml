@@ -17,17 +17,18 @@ jobs:
     steps:
       - name: test
         run: |
-          check=true
-          echo "::notice title=Input Test::$check"
-          echo "::notice title=Input Test::${{ inputs.bool == true }}"
-          if [ ${{ inputs.bool }} ]; then
-            echo "success"
+          if ${{ inputs.bool }} ; then
+            echo "just bool"
           fi
 
-          if [ ${{ inputs.string }}]; then
-            echo "test"
+          if [ ${{ inputs.bool }} ]; then
+            echo "bool with []"
+          fi
+
+          if [ ${{ inputs.string }} ]; then
+            echo "string with []"
           fi
 
           if ${{ inputs.string }} ; then
-            echo "hi"
+            echo "just string"
           fi
