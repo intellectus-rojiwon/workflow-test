@@ -23,9 +23,6 @@ on:
       memory: # e.g. 1024
         required: true
         type: number
-      runtime: # e.g. nodejs20.x
-        required: true
-        type: string
       architectures: # e.g. x86_64
         required: true
         type: string
@@ -129,7 +126,6 @@ jobs:
               --role arn:aws:iam::${{ steps.aws.outputs.aws-account-id }}:role/${{ steps.role.outputs.name }} \
               --region ${{ steps.value.outputs.function_aws_region }} \
               --architectures ${{ inputs.architectures }} \
-              --runtime ${{ inputs.runtime }} \
               --memory-size ${{ inputs.memory }} \
               --ephemeral-storage Size=${{ inputs.ephemeral_storage }} \
               --timeout ${{ inputs.timeout }} \
