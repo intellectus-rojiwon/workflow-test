@@ -23,7 +23,7 @@ jobs:
           if [ ${{ inputs.bool }} == $check ]; then
             echo "success"
           fi
-          echo "test ${{ inputs.bool }} == $check"
+          echo "[ ${{ inputs.bool }} == $check ]"
 
           if ${{ inputs.bool }} == check ; then
             echo "hi"
