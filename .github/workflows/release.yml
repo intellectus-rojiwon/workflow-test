@@ -79,7 +79,7 @@ jobs:
     needs:
       - project
       - image
-    if: inputs.lambda == 'true' && inputs.development == 'true'
+    if: inputs.lambda && inputs.development
     uses: ./.github/workflows/lambda.yml
     with:
       aws_region: ${{ vars.AWS_REGION }}
@@ -97,7 +97,7 @@ jobs:
     needs:
       - project
       - image
-    if: inputs.lambda == 'true' && inputs.production == 'true'
+    if: inputs.lambda && inputs.production
     uses: ./.github/workflows/lambda.yml
     with:
       aws_region: ${{ vars.AWS_REGION }}

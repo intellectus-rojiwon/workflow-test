@@ -81,7 +81,7 @@ jobs:
           echo "::notice title=Docker Image URI::$IMAGE_URI"
 
       - name: Build & Push Docker Image 🐳
-        if: inputs.push == 'true'
+        if: inputs.push
         run: |
           IMAGE_URI=${{ steps.image.outputs.uri }}
 

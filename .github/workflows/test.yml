@@ -17,7 +17,13 @@ jobs:
     steps:
       - name: test
         run: |
-          echo "::notice title=Input Test::${{ inputs.string }}"
-          echo "::notice title=Input Test::${{ inputs.bool }}"
-          echo "::notice title=Input Test::${{ inputs.bool == 'true' }}"
+          check=true
+          echo "::notice title=Input Test::$check"
           echo "::notice title=Input Test::${{ inputs.bool == true }}"
+          if [ ${{ inputs.bool }} == check ]; then
+            echo "success"
+          fi
+
+          if ${{ inputs.bool }} == check ; then
+            echo "hi"
+          fi
