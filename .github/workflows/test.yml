@@ -30,5 +30,7 @@ jobs:
         id: image
         run: |
           echo "ECR_REGISTRY=${{ steps.ecr.outputs.registry }}" >> "$GITHUB_ENV"
-          echo "::notice title=ECR Regsitry::$ECR_REGISTRY"
+
+
+          echo $ECR_REGISTRY
           echo "::notice title=ROLE_NAME::$(echo ${{ secrets.ROLE_TO_ASSUME }} | cut -d '/' -f 2-)"
