@@ -54,6 +54,9 @@ jobs:
 
           echo "::notice title=Project Info::$NAME:$VERSION"
 
+      - name: test
+        run: echo "${{ steps.project.outputs.name }}:${{ steps.project.outputs.version }}"
+
   test:
     runs-on: ubuntu-latest
     needs:
