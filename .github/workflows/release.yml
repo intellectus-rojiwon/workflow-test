@@ -49,8 +49,8 @@ jobs:
 
           VERSION=$(node -p "require('./package.json').version")
 
-          echo "name=$NAME" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
           echo "::notice title=Project Info::$NAME:$VERSION"
 

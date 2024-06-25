@@ -51,8 +51,8 @@ jobs:
           ROLE_SESSION_NAME=$Lambda-${{ inputs.function_name }}
           ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
 
-          echo "role_session_name=$ROLE_SESSION_NAME" >> $GITHUB_ENV
-          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> $GITHUB_ENV
+          echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials 🔑
         uses: aws-actions/configure-aws-credentials@main
@@ -77,7 +77,7 @@ jobs:
               --query 'Version' --output text)
 
           echo "::notice title=Lambda Deployed::${{ inputs.function_name }}:$LAMBDA_VERSION"
-          echo "version=$LAMBDA_VERSION" >> $GITHUB_ENV
+          echo "version=$LAMBDA_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Update Lambda URL 🛜
         run: |
@@ -95,7 +95,7 @@ jobs:
             check=true
           fi
 
-          echo "check=$check" >> $GITHUB_ENV
+          echo "check=$check" >> "$GITHUB_OUTPUT"
 
       - name: Provisioned Concurrency 👥
         if: steps.provisioned.outputs.check == 'true'

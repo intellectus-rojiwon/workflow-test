@@ -48,8 +48,8 @@ jobs:
 
           ${{ inputs.repository.default }}
 
-          echo "role_session_name=$ROLE_SESSION_NAME" >> $GITHUB_ENV
-          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> $GITHUB_ENV
+          echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials 🔑
         uses: aws-actions/configure-aws-credentials@main
@@ -69,7 +69,7 @@ jobs:
           aws ecr create-repository --repository-name ${{ inputs.repository }} --region ${{ inputs.region }}
 
           IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.repository }}
-          echo "uri=$IMAGE_URI" >> $GITHUB_ENV
+          echo "uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
 
           echo "::notice title=Docker Image URI::$IMAGE_URI"
 
