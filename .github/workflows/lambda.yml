@@ -122,11 +122,11 @@ jobs:
       - name: Deploy Lambda 📌
         id: function
         run: |
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ inputs.function_name }} --image-uri ${{ inputs.image_uri }} --region ${{ steps.value.outputs.function_aws_region }} --query 'Version' --output text || \
+          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ inputs.function_name }} --image-uri ${{ inputs.image_uri }} --region ${{ steps.value.outputs.function_aws_region }} --query 'Version' --output text 2>/dev/null || \
             aws lambda create-function \
               --function-name ${{ inputs.function_name }} \
               --package-type Image --code ImageUri=${{ inputs.image_uri }} \
-              --role ${{ steps.role.outputs.name }} \
+              --role arn:aws:iam:${{ steps.aws.outputs.aws-account-id }}:role/${{ steps.role.outputs.name }} \
               --region ${{ steps.value.outputs.function_aws_region }} \
               --architectures ${{ inputs.architectures }} \
               --runtime ${{ inputs.runtime }} \
@@ -140,7 +140,7 @@ jobs:
 
       - name: Update Lambda URL 🛜
         run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --region ${{ steps.value.outputs.function_aws_region }} --query 'FunctionUrl' --output text || \
+          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --region ${{ steps.value.outputs.function_aws_region }} --query 'FunctionUrl' --output text 2>/dev/null || \
           aws lambda create-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --region ${{ steps.value.outputs.function_aws_region }} --query 'FunctionUrl' --output text)
 
           echo "::notice title=Host::$FUNCTION_HOST"
