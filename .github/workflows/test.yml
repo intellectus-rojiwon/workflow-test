@@ -20,9 +20,10 @@ jobs:
           check=true
           echo "::notice title=Input Test::$check"
           echo "::notice title=Input Test::${{ inputs.bool == true }}"
-          if [ ${{ inputs.bool }} == check ]; then
+          if [ ${{ inputs.bool }} == $check ]; then
             echo "success"
           fi
+          echo "test ${{ inputs.bool }} == $check"
 
           if ${{ inputs.bool }} == check ; then
             echo "hi"
