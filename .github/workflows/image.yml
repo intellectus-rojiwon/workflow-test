@@ -87,19 +87,19 @@ jobs:
 
           if ! aws ecr describe-images --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.version }} > /dev/null 2>&1; then
             docker build -t $IMAGE_URI:${{ inputs.version }} .
-            docker push $$IMAGE_URI:${{ inputs.version }}
+            docker push $IMAGE_URI:${{ inputs.version }}
             echo "::notice title=Image Created::$IMAGE_URI:${{ inputs.version }}"
           fi
 
           if [ ${{ inputs.development }} == true ]; then
             docker tag $IMAGE_URI:${{ inputs.version }} $IMAGE_URI:dev
-            docker push $$IMAGE_URI:dev
+            docker push $IMAGE_URI:dev
             echo "::notice title=Image Created::$IMAGE_URI:dev"
           fi
 
           if [ ${{ inputs.produnction }} == true ]; then
             docker tag $IMAGE_URI:${{ inputs.version }} $IMAGE_URI:prod
-            docker push $$IMAGE_URI:prod
+            docker push $IMAGE_URI:prod
             echo "::notice title=Image Created::$IMAGE_URI:prod"
           fi
 
