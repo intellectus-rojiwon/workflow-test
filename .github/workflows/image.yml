@@ -81,7 +81,7 @@ jobs:
           echo "::notice title=Docker Image URI::$IMAGE_URI"
 
       - name: Build & Push Docker Image 🐳
-        if: inputs.push
+        if: inputs.push == true
         run: |
           IMAGE_URI=${{ steps.image.outputs.uri }}
 
@@ -91,13 +91,13 @@ jobs:
             echo "::notice title=Image Created::$IMAGE_URI:${{ inputs.version }}"
           fi
 
-          if [ ${{ inputs.development }} == "true" ]; then
+          if [ ${{ inputs.development }} == true ]; then
             docker tag $IMAGE_URI:${{ inputs.version }} $IMAGE_URI:dev
             docker push $$IMAGE_URI:dev
             echo "::notice title=Image Created::$IMAGE_URI:dev"
           fi
 
-          if [ ${{ inputs.produnction }} == "true" ]; then
+          if [ ${{ inputs.produnction }} == true ]; then
             docker tag $IMAGE_URI:${{ inputs.version }} $IMAGE_URI:prod
             docker push $$IMAGE_URI:prod
             echo "::notice title=Image Created::$IMAGE_URI:prod"

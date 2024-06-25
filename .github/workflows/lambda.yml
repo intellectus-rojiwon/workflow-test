@@ -67,7 +67,7 @@ jobs:
       - name: Deploy Lambda 📌
         id: function
         run: |
-          if [ -z ${{ inputs.function_aws_region }} ]; then
+          if [ -z "${{ inputs.function_aws_region }}" ]; then
             REGION=${{ inputs.aws_region }}
           else
             REGION=${{ inputs.function_aws_region }}
@@ -107,7 +107,7 @@ jobs:
           echo "check=$check" >> "$GITHUB_OUTPUT"
 
       - name: Provisioned Concurrency 👥
-        if: steps.provisioned.outputs.check
+        if: steps.provisioned.outputs.check == true
         run: |
           if[ -z "${{ inputs.provisioned_concurrency }}" ]; then
             echo "::error title=Provisioned Concurrency Input Missing::provisioned concurrency input is missinng."
