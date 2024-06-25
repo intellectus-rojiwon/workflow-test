@@ -104,8 +104,9 @@ jobs:
             echo "::error title=Provisioned Concurrency Input Missing::provisioned concurrency input is missinng."
           fi
 
-          aws lambda update-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} || \
-          aws lambda create-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }}
+          if ! aws lambda update-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} 2>/dev/null; then
+            aws lambda create-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }}
+          fi
 
           aws lambda put-provisioned-concurrency-config \
             --function-name ${{ inputs.function_name }} \
@@ -137,6 +138,6 @@ jobs:
             ]
           }'
 
-          aws iam put-role-policy --role-name $ROLE_NAME --policy-name ${{ steps.value.outputs.role_policy_name }} --policy-document $INLINE_POLICY
+          aws iam put-role-policy --role-name $ROLE_NAME --policy-name ${{ steps.value.outputs.role_policy_name }} --policy-document "$INLINE_POLICY"
 
           echo "::notice title=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"

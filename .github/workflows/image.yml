@@ -65,8 +65,12 @@ jobs:
       - name: Init ECR Repository
         id: image
         run: |
-          aws ecr describe-repositories --repository-names ${{ inputs.repository }} || \
-          aws ecr create-repository --repository-name ${{ inputs.repository }} --region ${{ inputs.region }}
+          REPOSITORY_NAME=${{ inputs.repository }}
+          REGION=${{ inputs.region }}
+
+          if ! aws ecr describe-repositories --repository-names $REPOSITORY_NAME 2>/dev/null; then
+            aws ecr create-repository --repository-name $REPOSITORY_NAME --region $REGION
+          fi
 
           IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.repository }}
           echo "uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
@@ -121,6 +125,6 @@ jobs:
             ]
           }'
 
-          aws iam put-role-policy --role-name $ROLE_NAME --policy-name ${{ steps.value.outputs.role_policy_name }} --policy-document $INLINE_POLICY
+          aws iam put-role-policy --role-name $ROLE_NAME --policy-name ${{ steps.value.outputs.role_policy_name }} --policy-document "$INLINE_POLICY"
 
           echo "::notice title=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"
