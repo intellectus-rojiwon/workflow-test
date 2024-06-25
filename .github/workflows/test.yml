@@ -19,8 +19,8 @@ jobs:
       - name: Configure AWS credentials 🔑
         uses: aws-actions/configure-aws-credentials@main
         with:
-          role-to-assume: ${{ secrets.role_to_assume }}
-          aws-region: ap-northeast-2
+          role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR 🔑
         id: ecr
