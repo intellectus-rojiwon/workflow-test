@@ -73,7 +73,7 @@ jobs:
           role-session-name: ${{ steps.value.outputs.role_session_name }}
           output-credentials: true
 
-      - name: Init Role for Lambda 🚨
+      - name: Init Role for Lambda 🛡️
         id: role
         run: |
           INLINE_POLICY='{
@@ -126,7 +126,7 @@ jobs:
             aws lambda create-function \
               --function-name ${{ inputs.function_name }} \
               --package-type Image --code ImageUri=${{ inputs.image_uri }} \
-              --role arn:aws:iam:${{ steps.aws.outputs.aws-account-id }}:role/${{ steps.role.outputs.name }} \
+              --role "arn:aws:iam::${{ steps.aws.outputs.aws-account-id }}:role/${{ steps.role.outputs.name }}" \
               --region ${{ steps.value.outputs.function_aws_region }} \
               --architectures ${{ inputs.architectures }} \
               --runtime ${{ inputs.runtime }} \
