@@ -59,6 +59,7 @@ jobs:
     uses: ./.github/workflows/image.yml
     with:
       repository: ${{ needs.project.outputs.name }}
+      region: ap-northeast-2
       version: ${{ needs.project.outputs.version }}
       development: ${{ inputs.development }}
       produnction: ${{ inputs.production }}

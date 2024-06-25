@@ -6,6 +6,9 @@ on:
       repository:
         required: true
         type: string
+      region:
+        required: true
+        type: string
       version:
         required: true
         type: string
@@ -19,9 +22,9 @@ on:
         required: true
         type: boolean
     secrets:
-      role-to-assume:
+      role_to_assume:
         required: true
-      aws-region:
+      aws_region:
         required: true
     outputs:
       image_uri:
@@ -51,8 +54,8 @@ jobs:
       - name: Configure AWS credentials 🔑
         uses: aws-actions/configure-aws-credentials@main
         with:
-          role-to-assume: ${{ secrets.role-to-assume }}
-          aws-region: ${{ secrets.aws-region }}
+          role-to-assume: ${{ secrets.role_to_assume }}
+          aws-region: ${{ secrets.aws_region }}
           role-session-name: ${{ steps.value.outputs.role_session_name }}
 
       - name: Login to Amazon ECR 🔑
@@ -63,7 +66,7 @@ jobs:
         id: image
         run: |
           aws ecr describe-repositories --repository-names ${{ inputs.repository }} || \
-          aws ecr create-repository --repository-name ${{ inputs.repository }} --region ${{ secrets.aws-region }}
+          aws ecr create-repository --repository-name ${{ inputs.repository }} --region ${{ inputs.region }}
 
           IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.repository }}
           echo "uri=$IMAGE_URI" >> $GITHUB_ENV
@@ -95,7 +98,7 @@ jobs:
 
       - name: Revoke AWS Role Session 🔒
         run: |
-          ROLE_NAME=$(echo ${{ secrets.role-to-assume }} | cut -d '/' -f 2-)
+          ROLE_NAME=$(echo ${{ secrets.role_to_assume }} | cut -d '/' -f 2-)
           ROLE_SESSION_NAME=${{ steps.value.outputs.role_session_name }}
           CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") 
 
