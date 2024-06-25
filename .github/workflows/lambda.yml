@@ -1,106 +1,142 @@
-name: Lambda Function 🤖
+name: Lambda Deploy 📌
 
 on:
   workflow_call:
     inputs:
-      development:
-        required: true
-        default: true
-        type: boolean
-      production:
-        required: true
-        default: false
-        type: boolean
-      project:
+      function_name:
         required: true
         type: string
-      image_uri:
+      region: # ap-northeast-2
         required: true
         type: string
-    secrets:
-      aws-access-key-id:
+      image_uri: # include tag
         required: true
-      aws-secret-access-key:
+        type: string
+      memory: # e.g. 1024
         required: true
+        type: number
+      runtime: # e.g. nodejs20.x
+        required: true
+        type: string
+      architectures: # e.g. x86_64
+        required: true
+        type: string
+      ephemeral_storage: # e.g. 512
+        required: true
+        type: number
+      timeout: # e.g. 6
+        required: true
+        type: number
+      provisioned_concurrency: # 3
+        required: false
+        type: number
 
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
+    secrets:
+      role-to-assume:
+        required: true
+      aws-region:
+        required: true
 
 jobs:
-  development:
-    if: github.event.inputs.development == 'true'
+  deploy:
     runs-on: ubuntu-latest
-    env:
-      FUNCTION_NAME: ${{ github.event.inputs.project }}-dev
 
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@main
 
-      - name: Deploy Lambda Function
+      - name: Create Values
+        id: value
         run: |
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI --query 'Version' --output text || \
-            aws lambda create-function --function-name $FUNCTION_NAME --package-type Image --code ImageUri=$IMAGE_URI \
-              --region ${{ env.AWS_REGION }} \
-              --memory-size 1024 --runtime nodejs20.x --architectures x86_64 --ephemeral-storage Size=512 \
-              --timeout 6 --query 'Version' --output text)
+          ROLE_SESSION_NAME=$Lambda-${{ inputs.function_name }}
+          ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
 
-          echo "::notice title=Lambda Deployed::$FUNCTION_NAME:$LAMBDA_VERSION"
-        env:
-          IMAGE_URI: ${{ github.event.inputs.image_uri  }}:dev
+          echo "role_session_name=$ROLE_SESSION_NAME" >> $GITHUB_ENV
+          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> $GITHUB_ENV
 
-      - name: Update Lambda URL
-        run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text || \
-          aws lambda create-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text)
+      - name: Configure AWS credentials 🔑
+        uses: aws-actions/configure-aws-credentials@main
+        with:
+          role-to-assume: ${{ secrets.role-to-assume }}
+          aws-region: ${{ secrets.aws-region }}
+          role-session-name: ${{ steps.value.outputs.role_session_name }}
 
-          echo "::notice title=(Development) Host::$FUNCTION_HOST"
-
-  production:
-    if: github.event.inputs.production == 'true'
-    runs-on: ubuntu-latest
-    env:
-      FUNCTION_NAME: ${{ github.event.inputs.project }}-prod
-
-    steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@main
-
-      - name: Lambda Deploy
+      - name: Deploy Lambda 📌
         id: function
         run: |
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI --query 'Version' --output text || \
+          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ inputs.function_name }} --image-uri ${{ inputs.image_uri }} --query 'Version' --output text || \
             aws lambda create-function \
-              --function-name $FUNCTION_NAME \
-              --package-type Image --code ImageUri=$IMAGE_URI \
-              --region ${{ env.AWS_REGION }} \
-              --architectures x86_64 \
-              --runtime nodejs20.x \
-              --memory-size 4096 \
-              --ephemeral-storage Size=512 \
-              --timeout 30 \
+              --function-name ${{ inputs.function_name }} \
+              --package-type Image --code ImageUri=${{ inputs.image_uri }} \
+              --region ${{ inputs.region }} \
+              --architectures ${{ inputs.architectures }} \
+              --runtime ${{ inputs.runtime }} \
+              --memory-size ${{ inputs.memory }} \
+              --ephemeral-storage Size=${{ inputs.ephemeral_storage }} \
+              --timeout ${{ inputs.timeout }} \
               --query 'Version' --output text)
 
-          echo "::notice title=Lambda Deployed::$FUNCTION_NAME:$LAMBDA_VERSION"
+          echo "::notice title=Lambda Deployed::${{ inputs.function_name }}:$LAMBDA_VERSION"
           echo "version=$LAMBDA_VERSION" >> $GITHUB_ENV
-        env:
-          IMAGE_URI: ${{ github.event.inputs.image_uri  }}:prod
 
-      - name: Provisioned Concurrency
+      - name: Update Lambda URL 🛜
         run: |
-          aws lambda update-alias --function-name $FUNCTION_NAME --name provisioned --function-version ${{ steps.function.outputs.version }} || \
-          aws lambda create-alias --function-name $FUNCTION_NAME --name provisioned --function-version ${{ steps.function.outputs.version }}
+          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --query 'FunctionUrl' --output text || \
+          aws lambda create-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --query 'FunctionUrl' --output text)
+
+          echo "::notice title=Host::$FUNCTION_HOST"
+
+      - name: Check Provisioned Concurrency
+        id: provisioned
+        run: |
+          if[ -z "${{ inputs.provisioned_concurrency }}" ]; then
+            check=false
+          else
+            check=true
+          fi
+
+          echo "check=$check" >> $GITHUB_ENV
+
+      - name: Provisioned Concurrency 👥
+        if: steps.provisioned.outputs.check == 'true'
+        run: |
+          if[ -z "${{ inputs.provisioned_concurrency }}" ]; then
+            echo "::error title=Provisioned Concurrency Input Missing::provisioned concurrency input is missinng."
+          fi
+
+          aws lambda update-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} || \
+          aws lambda create-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }}
 
           aws lambda put-provisioned-concurrency-config \
-            --function-name $FUNCTION_NAME \
-            --qualifier provisioned
-            --provisioned-concurrent-executions 3
+            --function-name ${{ inputs.function_name }} \
+            --qualifier provisioned \
+            --provisioned-concurrent-executions ${{ inputs.provisioned_concurrency }}
 
-      - name: Update Lambda URL
+      - name: Revoke AWS Role Session 🔒
         run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text || \
-          aws lambda create-function-url-config --function-name $FUNCTION_NAME --auth-type NONE --query 'FunctionUrl' --output text)
+          ROLE_NAME=$(echo ${{ secrets.role-to-assume }} | cut -d '/' -f 2-)
+          ROLE_SESSION_NAME=${{ steps.value.outputs.role_session_name }}
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") 
 
-          echo "::notice title=(Production) Host::$FUNCTION_HOST"
+          INLINE_POLICY='{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Deny",
+                "Action": ["*"],
+                "Resource": ["*"],
+                "Condition": {
+                  "DateLessThan": {
+                    "aws:TokenIssueTime": "'"$CURRENT_TIME"'"
+                  },
+                  "StringEquals": {
+                    "sts:RoleSessionName": "'"$ROLE_SESSION_NAME"'"
+                  }
+                }
+              }
+            ]
+          }'
+
+          aws iam put-role-policy --role-name $ROLE_NAME --policy-name ${{ steps.value.outputs.role_policy_name }} --policy-document $INLINE_POLICY
+
+          echo "::notice title=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"

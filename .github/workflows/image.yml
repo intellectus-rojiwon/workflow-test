@@ -3,84 +3,121 @@ name: Docker Image 🐳
 on:
   workflow_call:
     inputs:
-      development:
-        required: true
-        default: true
-        type: boolean
-      production:
-        required: true
-        default: false
-        type: boolean
-      image:
-        required: true
-        default: false
-        type: boolean
-      project:
+      repository:
         required: true
         type: string
       version:
         required: true
         type: string
-    secrets:
-      aws-access-key-id:
+      development:
         required: true
-      aws-secret-access-key:
+        type: boolean
+      produnction:
+        required: true
+        type: boolean
+      push:
+        required: true
+        type: boolean
+    secrets:
+      role-to-assume:
+        required: true
+      aws-region:
         required: true
     outputs:
-      registry:
-        value: ${{ jobs.image.outputs.registry }}
-
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
-
-permissions:
-  contents: read
+      image_uri:
+        value: ${{ jobs.build_and_push.outputs.image_uri }}
 
 jobs:
-  image:
+  build_and_push:
     runs-on: ubuntu-latest
     outputs:
-      registry: ${{ steps.ecr.outputs.registry }}
+      image_uri: ${{ steps.image.outputs.uri }}
 
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@main
 
-      - name: Login to Amazon ECR 🔒
+      - name: Create Values
+        id: value
+        run: |
+          ROLE_SESSION_NAME=ECR-${{ inputs.repository }}-${{ inputs.version }}
+          ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
+
+          ${{ inputs.repository.default }}
+
+          echo "role_session_name=$ROLE_SESSION_NAME" >> $GITHUB_ENV
+          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials 🔑
+        uses: aws-actions/configure-aws-credentials@main
+        with:
+          role-to-assume: ${{ secrets.role-to-assume }}
+          aws-region: ${{ secrets.aws-region }}
+          role-session-name: ${{ steps.value.outputs.role_session_name }}
+
+      - name: Login to Amazon ECR 🔑
         id: ecr
         uses: aws-actions/amazon-ecr-login@main
 
-      - name: Init Repository
+      - name: Init ECR Repository
+        id: image
         run: |
-          aws ecr describe-repositories --repository-names ${{ github.event.inputs.project }} || \
-          aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ env.AWS_REGION }}
+          aws ecr describe-repositories --repository-names ${{ inputs.repository }} || \
+          aws ecr create-repository --repository-name ${{ inputs.repository }} --region ${{ secrets.aws-region }}
 
-      - name: Build & Push Docker Image ✨
-        if: github.event.inputs.image == 'true'
+          IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.repository }}
+          echo "uri=$IMAGE_URI" >> $GITHUB_ENV
+
+          echo "::notice title=Docker Image URI::$IMAGE_URI"
+
+      - name: Build & Push Docker Image 🐳
+        if: inputs.push == 'true'
         run: |
-          if ! aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=$IMAGE_TAG > /dev/null 2>&1; then
-            docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          IMAGE_URI=${{ steps.image.outputs.uri }}
 
-            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          if ! aws ecr describe-images --repository-name ${{ inputs.repository }} --image-ids imageTag=${{ inputs.version }} > /dev/null 2>&1; then
+            docker build -t $IMAGE_URI:${{ inputs.version }} .
+            docker push $$IMAGE_URI:${{ inputs.version }}
+            echo "::notice title=Image Created::$IMAGE_URI:${{ inputs.version }}"
           fi
 
-          if [ ${{ github.event.inputs.development }} == "true" ]; then
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:dev
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev
-
-            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:dev"
+          if [ ${{ inputs.development }} == "true" ]; then
+            docker tag $IMAGE_URI:${{ inputs.version }} $IMAGE_URI:dev
+            docker push $$IMAGE_URI:dev
+            echo "::notice title=Image Created::$IMAGE_URI:dev"
           fi
 
-          if [ ${{ github.event.inputs.production }} == "true" ]; then
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:prod
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod
-
-            echo "::notice title=Image Created::$name:$ECR_REGISTRY/$ECR_REPOSITORY:prod"
+          if [ ${{ inputs.produnction }} == "true" ]; then
+            docker tag $IMAGE_URI:${{ inputs.version }} $IMAGE_URI:prod
+            docker push $$IMAGE_URI:prod
+            echo "::notice title=Image Created::$IMAGE_URI:prod"
           fi
-        env:
-          ECR_REPOSITORY: ${{ github.event.inputs.project }}
-          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.event.inputs.version }}
+
+      - name: Revoke AWS Role Session 🔒
+        run: |
+          ROLE_NAME=$(echo ${{ secrets.role-to-assume }} | cut -d '/' -f 2-)
+          ROLE_SESSION_NAME=${{ steps.value.outputs.role_session_name }}
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") 
+
+          INLINE_POLICY='{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Deny",
+                "Action": ["*"],
+                "Resource": ["*"],
+                "Condition": {
+                  "DateLessThan": {
+                    "aws:TokenIssueTime": "'"$CURRENT_TIME"'"
+                  },
+                  "StringEquals": {
+                    "sts:RoleSessionName": "'"$ROLE_SESSION_NAME"'"
+                  }
+                }
+              }
+            ]
+          }'
+
+          aws iam put-role-policy --role-name $ROLE_NAME --policy-name ${{ steps.value.outputs.role_policy_name }} --policy-document $INLINE_POLICY
+
+          echo "::notice title=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"
