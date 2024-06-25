@@ -88,7 +88,7 @@ jobs:
                   "logs:PutLogEvents"
                 ],
                 "Resource": [
-                  "arn:aws:logs:${{ steps.value.outputs.function_aws_region }}:${{ steps.aws.outputs.aws-account-id }}:log-group:/aws/lambda/${{ inputs.function_name }}*"
+                  "arn:aws:logs:${{ steps.value.outputs.function_aws_region }}:${{ steps.aws.outputs.aws-account-id }}:log-group:/aws/lambda/${{ inputs.function_name }}:*"
                 ]
               }
             ]
