@@ -28,4 +28,6 @@ jobs:
 
       - name: Init ECR Repository
         id: image
-        run: echo "::notice title=ECR Regsitry::${{ steps.ecr.outputs.registry }}"
+        run: |
+          echo "::notice title=ECR Regsitry::${{ steps.ecr.outputs.registry }}"
+          echo "::notice title=ROLE_NAME::$(echo ${{ secrets.ROLE_TO_ASSUME }} | cut -d '/' -f 2-)"
