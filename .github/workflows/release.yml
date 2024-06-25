@@ -6,6 +6,9 @@ on:
       name:
         required: false
         type: string
+      version:
+        required: false
+        type: string
       development:
         required: true
         type: boolean
@@ -47,7 +50,11 @@ jobs:
             NAME=${{ inputs.name }}  
           fi
 
-          VERSION=$(node -p "require('./package.json').version")
+          if [ -z "${{ inputs.version }}" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+          else
+            VERSION=${{ inputs.version }}
+          fi
 
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
