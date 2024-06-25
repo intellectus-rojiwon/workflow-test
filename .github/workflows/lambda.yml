@@ -123,7 +123,7 @@ jobs:
             aws lambda create-function \
               --function-name ${{ inputs.function_name }} \
               --package-type Image --code ImageUri=${{ inputs.image_uri }} \
-              --role ${{ steps.role.outputs.name }} \
+              --role arn:aws:iam::${{ steps.aws.outputs.aws-account-id }}:role/${{ steps.role.outputs.name }} \
               --region ${{ steps.value.outputs.function_aws_region }} \
               --architectures ${{ inputs.architectures }} \
               --memory-size ${{ inputs.memory }} \
