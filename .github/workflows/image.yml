@@ -89,6 +89,9 @@ jobs:
             docker build -t $IMAGE_URI:${{ inputs.version }} .
             docker push $IMAGE_URI:${{ inputs.version }}
             echo "::notice title=Image Created::$IMAGE_URI:${{ inputs.version }}"
+          else
+            docker pull $IMAGE_URI:${{ inputs.version }}
+            echo "::notice title=Imgae Pulled"::$IMAGE_URI:${{ inputs.version }}"
           fi
 
           if [ ${{ inputs.development }} == true ]; then
