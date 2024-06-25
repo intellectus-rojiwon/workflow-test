@@ -1,4 +1,4 @@
-name: Lambda Deploy 📌
+name: Lambda Function ƛ
 
 on:
   workflow_call:
