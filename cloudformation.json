@@ -124,9 +124,9 @@
     },
     "Conditions": {
       "LambdaVersionAliasing": {
-        "Fn:Not": [
+        "Fn::Not": [
           {
-            "Fn:Equals": [
+            "Fn::Equals": [
               {
                 "Ref": "ProvisionedConcurrency"
               },
