@@ -93,7 +93,7 @@
         }
       },
       "LambdaVersionAlias": {
-        "Type": "AWS::Lambda:Alias",
+        "Type": "AWS::Lambda::Alias",
         "DependsOn": "LambdaFunction",
         "Condition": "LambdaVersionAliasing",
         "Properties": {
