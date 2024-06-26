@@ -59,7 +59,7 @@ jobs:
           fi
 
           IMAGE_TAG=$(echo ${{ inputs.image_uri }} | cut -d ':' -f 2-)
-          IMAGE_DIGEST=$(aws ecr describe-images --repository-name 'workflow-test' --image-ids imageTag=devs --query 'imageDetails[0].imageDigest' --output text)
+          IMAGE_DIGEST=$(aws ecr describe-images --repository-name 'workflow-test' --image-ids imageTag=$IMAGE_TAG --query 'imageDetails[0].imageDigest' --output text)
 
           echo "image_digest=$(echo $IMAGE_DIGEST | cut -d ':' -f 2- )" >> "$GITHUB_OUTPUT"
           echo "provisioned_concurrency=$PROVISIONED" >> "$GITHUB_OUTPUT"
