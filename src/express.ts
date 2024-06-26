@@ -6,6 +6,4 @@ export const app = express();
 
 app.use(bodyParser.json(), cookieParser());
 
-app.get('/test', (_, res) => {
-    res.json(process.env);
-})
+app.get('/test', (_, res) =>  res.json(process.env))

@@ -5,6 +5,9 @@
       "LambdaExecutionRole": {
         "Type": "AWS::IAM::Role",
         "Properties": {
+          "RoleName": {
+            "Fn::Sub": "Lambda-${AWS::Region}-${LambdaFunctionName}-ExecutionRole"
+          },
           "AssumeRolePolicyDocument": {
             "Version": "2012-10-17",
             "Statement": [
@@ -19,7 +22,7 @@
           },
           "Policies": [
             {
-              "PolicyName": "AWSLambdaBasicExecutionRolePolicy",
+              "PolicyName": "BasicExecutionRolePolicy",
               "PolicyDocument": {
                 "Version": "2012-10-17",
                 "Statement": [
@@ -119,6 +122,18 @@
           "TargetFunctionArn": {
             "Fn::GetAtt": "LambdaFunction.Arn"
           }
+        }
+      },
+      "LambdaFunctionPermission": {
+        "Type": "AWS::Lambda::Permission",
+        "DependsOn": "LambdaFunction",
+        "Properties": {
+          "Action": "lambda:InvokeFunctionUrl",
+          "Principal": "*",
+          "FunctionName": {
+            "Ref": "LambdaFunctionName"
+          },
+          "FunctionUrlAuthType": "NONE"
         }
       }
     },
