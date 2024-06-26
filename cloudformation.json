@@ -126,12 +126,11 @@
       },
       "LambdaFunctionPermission": {
         "Type": "AWS::Lambda::Permission",
-        "DependsOn": "LambdaFunction",
         "Properties": {
           "Action": "lambda:InvokeFunctionUrl",
           "Principal": "*",
           "FunctionName": {
-            "Ref": "LambdaFunctionName"
+            "Fn::GetAtt": "LambdaFunction.Arn"
           },
           "FunctionUrlAuthType": "NONE"
         }
