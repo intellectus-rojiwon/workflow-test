@@ -77,27 +77,6 @@
             "Ref": "LambdaTimeout"
           }
         }
-      },
-      "LambdaFunctionUrlConfig": {
-        "Type": "AWS::Lambda::Url",
-        "Properties": {
-          "AuthType": "NONE",
-          "TargetFunctionArn": {
-            "Fn::GetAtt": "LambdaFunction.Arn"
-          }
-        }
-      },
-      "LambdaAlias": {
-        "Type": "AWS::Lambda::Alias",
-        "Properties": {
-          "FunctionName": {
-            "Ref": "LambdaFunctionName"
-          },
-          "FunctionVersion": {
-            "Fn::GetAtt": "LambdaFunction.Version"
-          },
-          "Name": "provisioned"
-        }
       }
     },
     "Parameters": {
