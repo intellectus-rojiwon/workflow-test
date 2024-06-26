@@ -127,7 +127,7 @@
       "LambdaFunctionPermission": {
         "Type": "AWS::Lambda::Permission",
         "Properties": {
-          "PolicyName": "FunctionURLAllowPublicAccess",
+          "PrincipalOrgId": "FunctionURLAllowPublicAccess",
           "Action": "lambda:InvokeFunctionUrl",
           "Principal": "*",
           "FunctionName": {
