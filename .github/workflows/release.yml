@@ -85,7 +85,6 @@ jobs:
       aws_region: ${{ vars.AWS_REGION }}
       role_to_assume: ${{ vars.AWS_ROLE }}
       function_name: ${{ needs.project.outputs.name }}-dev
-      # function_aws_region: {{ vars.AWS_REGION }}
       image_uri: ${{ needs.image.outputs.image_uri }}:dev
       memory: 1024
       architectures: x86_64
@@ -102,7 +101,6 @@ jobs:
       aws_region: ${{ vars.AWS_REGION }}
       role_to_assume: ${{ vars.AWS_ROLE }}
       function_name: ${{ needs.project.outputs.name }}-prod
-      # function_aws_region: {{ vars.AWS_REGION }}
       image_uri: ${{ needs.image.outputs.image_uri }}:prod
       memory: 4096
       architectures: x86_64
