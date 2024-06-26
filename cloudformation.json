@@ -1,5 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "The AWS CloudFormation template for this Lambda Function",
     "Resources": {
       "LambdaExecutionRole": {
         "Type": "AWS::IAM::Role",
@@ -77,6 +78,62 @@
             "Ref": "LambdaTimeout"
           }
         }
+      },
+      "LambdaVersion": {
+        "Type": "AWS::Lambda::Version",
+        "DependsOn": "LambdaFunction",
+        "DeletionPolicy": "Retain",
+        "Properties": {
+          "FunctionName": {
+            "Ref": "LambdaFunctionName"
+          },
+          "CodeSha256": {
+            "Ref": "LambdaVersionCode"
+          }
+        }
+      },
+      "LambdaVersionAlias": {
+        "Type": "AWS::Lambda:Alias",
+        "DependsOn": "LambdaFunction",
+        "Condition": "LambdaVersionAliasing",
+        "Properties": {
+          "FunctionName": {
+            "Ref": "LambdaFunctionName"
+          },
+          "FunctionVersion": {
+            "Fn::GetAtt": "LambdaVersion.Version"
+          },
+          "Name": "provisioned",
+          "ProvisionedConcurrencyConfig": {
+            "ProvisionedConcurrentExecutions": {
+              "Ref": "ProvisionedConcurrency"
+            }
+          }
+        }
+      },
+      "LambdaFunctionUrl": {
+        "Type": "AWS::Lambda::Url",
+        "DependsOn": "LambdaFunction",
+        "Properties": {
+          "AuthType": "NONE",
+          "TargetFunctionArn": {
+            "Fn::GetAtt": "LambdaFunction.Arn"
+          }
+        }
+      }
+    },
+    "Conditions": {
+      "LambdaVersionAliasing": {
+        "Fn:Not": [
+          {
+            "Fn:Equals": [
+              {
+                "Ref": "ProvisionedConcurrency"
+              },
+              0
+            ]
+          }
+        ]
       }
     },
     "Parameters": {
@@ -106,9 +163,24 @@
         "Type": "Number",
         "Description": "Timeout for the Lambda function (in seconds)",
         "Default": 6
+      },
+      "LambdaVersionCode": {
+        "Type": "String",
+        "Description": "Sha256 Code for Lambda Version Match"
+      },
+      "ProvisionedConcurrency": {
+        "Type": "Number",
+        "Description": "Provisioned concurrency for the Lambda function",
+        "Default": 0
       }
     },
     "Outputs": {
+      "LambdaFunctionUrl": {
+        "Description": "URL of the deployed Lambda function",
+        "Value": {
+          "Fn::GetAtt": "LambdaFunctionUrl.FunctionUrl"
+        }
+      }
     }
   }
   
