@@ -49,13 +49,9 @@ jobs:
           path: "workflow-test"
           ref: "main"
 
-      - run: aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text | cut -d ':' -f 2-
-
       - name: Create Values
         id: value
         run: |
-          set -e
-
           FUNCTION_NAME=${{ inputs.name }}-${{ inputs.version }}
           ROLE_SESSION_NAME=$Lambda-$FUNCTION_NAME
           ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
@@ -66,7 +62,12 @@ jobs:
             PROVISIONED=${{ inputs.provisioned_concurrency }}
           fi
 
-          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text | cut -d ':' -f 2-)
+          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null | cut -d ':' -f 2-)
+
+          if [ -z "$IMAGE_DIGEST" ]; then
+              echo "::error title=Image Not Found::ecr image not found tag=${{ inputs.version }}"
+              exit 1
+          fi
 
           echo "function_name=$FUNCTION_NAME" >> "$GITHUB_OUTPUT"
           echo "image_digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
