@@ -69,7 +69,6 @@ jobs:
       aws_region: ${{ vars.AWS_REGION }}
       role_to_assume: ${{ vars.AWS_ROLE }}
       ecr_repository: ${{ needs.project.outputs.name }}
-      # ecr_aws_region: {{ vars.AWS_REGION }}
       version: ${{ needs.project.outputs.version }}
       development: ${{ inputs.development }}
       produnction: ${{ inputs.production }}

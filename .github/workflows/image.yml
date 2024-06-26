@@ -12,9 +12,6 @@ on:
       ecr_repository:
         required: true
         type: string
-      ecr_aws_region:
-        required: false
-        type: string
       version:
         required: true
         type: string
@@ -36,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_uri: ${{ steps.image.outputs.uri }}
+      image_digest: ${{ steps.image.outputs.uri }}
 
     steps:
       - name: Checkout 🛎️
@@ -65,14 +63,9 @@ jobs:
         id: image
         run: |
           REPOSITORY_NAME=${{ inputs.ecr_repository }}
-          if [ -z ${{ inputs.ecr_aws_region }} ]; then
-            REGION=${{ inputs.aws_region }}
-          else
-            REGION=${{ inputs.ecr_aws_region }}
-          fi
 
           if ! aws ecr describe-repositories --repository-names $REPOSITORY_NAME 2>/dev/null; then
-            aws ecr create-repository --repository-name $REPOSITORY_NAME --region $REGION
+            aws ecr create-repository --repository-name $REPOSITORY_NAME --region ${{ inputs.aws_region }}
           fi
 
           IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.ecr_repository }}

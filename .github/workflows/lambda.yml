@@ -58,6 +58,10 @@ jobs:
             PROVISIONED=${{ inputs.provisioned_concurrency }}
           fi
 
+          IMAGE_TAG=$(echo ${{ inputs.image_uri }} | cut -d ':' -f 2-)
+          IMAGE_DIGEST=$(aws ecr describe-images --repository-name 'workflow-test' --image-ids imageTag=devs --query 'imageDetails[0].imageDigest' --output text)
+
+          echo "image_digest=$(echo $IMAGE_DIGEST | cut -d ':' -f 2- )" >> "$GITHUB_OUTPUT"
           echo "provisioned_concurrency=$PROVISIONED" >> "$GITHUB_OUTPUT"
           echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
           echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
@@ -83,6 +87,8 @@ jobs:
               LambdaMemorySize=${{ inputs.memory }} \
               LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
               LambdaTimeout=${{ inputs.timeout }} \
+              LambdaVersionCode=${{ steps.value.outputs.image_digest }} \
+              ProvisionedConcurrency=${{ steps.value.outputs.provisioned_concurrency }} \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 
