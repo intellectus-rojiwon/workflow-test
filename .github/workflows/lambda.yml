@@ -83,7 +83,9 @@ jobs:
               LambdaMemorySize=${{ inputs.memory }} \
               LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
               LambdaTimeout=${{ inputs.timeout }} \
-              ProvisionedConcurrency=${{ steps.value.outputs.provisioned_concurrency }}
+              ProvisionedConcurrency=${{ steps.value.outputs.provisioned_concurrency }} \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset
 
       - name: Init Role for Lambda 🛡️
         id: role
