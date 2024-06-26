@@ -20,7 +20,7 @@ on:
       image:
         required: true
         type: boolean
-        default: false
+        default: true
       lambda:
         required: true
         type: boolean

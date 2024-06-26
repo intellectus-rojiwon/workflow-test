@@ -62,15 +62,7 @@ jobs:
             PROVISIONED=${{ inputs.provisioned_concurrency }}
           fi
 
-          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null | cut -d ':' -f 2-)
-
-          if [ -z "$IMAGE_DIGEST" ]; then
-              echo "::error title=Image Not Found::ecr image not found tag=${{ inputs.version }}"
-              exit 1
-          fi
-
           echo "function_name=$FUNCTION_NAME" >> "$GITHUB_OUTPUT"
-          echo "image_digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
           echo "provisioned_concurrency=$PROVISIONED" >> "$GITHUB_OUTPUT"
           echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
           echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
@@ -86,6 +78,13 @@ jobs:
 
       - name: Deploy Cloudformation
         run: |
+          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null | cut -d ':' -f 2-)
+
+          if [ -z "$IMAGE_DIGEST" ]; then
+              echo "::error title=Image Not Found::ecr image not found tag=${{ inputs.version }}"
+              exit 1
+          fi
+
           aws cloudformation deploy \
             --template-file workflow-test/cloudformation.json \
             --stack-name lambda-${{ steps.value.outputs.function_name }} \
@@ -96,7 +95,7 @@ jobs:
               LambdaMemorySize=${{ inputs.memory }} \
               LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
               LambdaTimeout=${{ inputs.timeout }} \
-              LambdaVersionCode=${{ steps.value.outputs.image_digest }} \
+              LambdaVersionCode=$IMAGE_DIGEST \
               ProvisionedConcurrency=${{ steps.value.outputs.provisioned_concurrency }} \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
