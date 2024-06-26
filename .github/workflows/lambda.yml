@@ -87,7 +87,7 @@ jobs:
 
           aws cloudformation deploy \
             --template-file workflow-test/cloudformation.json \
-            --stack-name lambda-${{ steps.value.outputs.function_name }} \
+            --stack-name lambda-${{ inputs.aws_region }}-${{ steps.value.outputs.function_name }} \
             --parameter-overrides \
               LambdaFunctionName=${{ steps.value.outputs.function_name }} \
               LambdaImageUri=${{ inputs.image_uri }}:${{ inputs.version }} \
