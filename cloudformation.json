@@ -98,18 +98,6 @@
           },
           "Name": "provisioned"
         }
-      },
-      "ProvisionedConcurrencyConfig": {
-        "Type": "AWS::Lambda::ProvisionedConcurrencyConfig",
-        "Properties": {
-          "FunctionName": {
-            "Ref": "LambdaFunctionName"
-          },
-          "Qualifier": "provisioned",
-          "ProvisionedConcurrentExecutions": {
-            "Ref": "ProvisionedConcurrency"
-          }
-        }
       }
     },
     "Parameters": {
@@ -139,11 +127,6 @@
         "Type": "Number",
         "Description": "Timeout for the Lambda function (in seconds)",
         "Default": 6
-      },
-      "ProvisionedConcurrency": {
-        "Type": "Number",
-        "Description": "Provisioned concurrency for the Lambda function",
-        "Default": 0
       }
     },
     "Outputs": {
