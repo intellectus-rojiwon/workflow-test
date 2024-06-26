@@ -10,7 +10,10 @@ on:
         required: true
         type: string
 
-      function_name:
+      name:
+        required: true
+        type: string
+      version:
         required: true
         type: string
 
@@ -49,7 +52,8 @@ jobs:
       - name: Create Values
         id: value
         run: |
-          ROLE_SESSION_NAME=$Lambda-${{ inputs.function_name }}
+          FUNCTION_NAME=${{ inputs.name }}-${{ inputs.version }}
+          ROLE_SESSION_NAME=$Lambda-$FUNCTION_NAME
           ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
 
           if [ -z "${{ inputs.provisioned_concurrency }}" ]; then
@@ -58,10 +62,11 @@ jobs:
             PROVISIONED=${{ inputs.provisioned_concurrency }}
           fi
 
-          IMAGE_TAG=$(echo ${{ inputs.image_uri }} | cut -d ':' -f 2-)
-          IMAGE_DIGEST=$(aws ecr describe-images --repository-name 'workflow-test' --image-ids imageTag=$IMAGE_TAG --query 'imageDetails[0].imageDigest' --output text)
+          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text)
 
-          echo "image_digest=$(echo $IMAGE_DIGEST | cut -d ':' -f 2- )" >> "$GITHUB_OUTPUT"
+
+          echo "function_name=$FUNCTION_NAME" >> "$GITHUB_OUTPUT"
+          echo "image_digest=$(echo $IMAGE_DIGEST | cut -d ':' -f 2-)" >> "$GITHUB_OUTPUT"
           echo "provisioned_concurrency=$PROVISIONED" >> "$GITHUB_OUTPUT"
           echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
           echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
@@ -79,10 +84,10 @@ jobs:
         run: |
           aws cloudformation deploy \
             --template-file workflow-test/cloudformation.json \
-            --stack-name ${{ inputs.function_name }} \
+            --stack-name lambda-${{ steps.value.outputs.function_name }} \
             --parameter-overrides \
-              LambdaFunctionName=${{ inputs.function_name }} \
-              LambdaImageUri=${{ inputs.image_uri }} \
+              LambdaFunctionName=${{ steps.value.outputs.function_name }} \
+              LambdaImageUri=${{ inputs.image_uri }}:${{ inputs.version }} \
               LambdaArchitectures=${{ inputs.architectures }} \
               LambdaMemorySize=${{ inputs.memory }} \
               LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
@@ -111,7 +116,7 @@ jobs:
                   "logs:PutLogEvents"
                 ],
                 "Resource": [
-                  "arn:aws:logs:${{ inputs.aws_region }}:${{ steps.aws.outputs.aws-account-id }}:log-group:/aws/lambda/${{ inputs.function_name }}:*"
+                  "arn:aws:logs:${{ inputs.aws_region }}:${{ steps.aws.outputs.aws-account-id }}:log-group:/aws/lambda/${{ steps.value.outputs.function_name }}:*"
                 ]
               }
             ]
@@ -130,7 +135,7 @@ jobs:
             ]
           }'
 
-          LAMBDA_ROLE_NAME=${{ inputs.function_name }}-${{ inputs.aws_region }}-lambdaExecutionRole
+          LAMBDA_ROLE_NAME=${{ steps.value.outputs.function_name }}-${{ inputs.aws_region }}-lambdaExecutionRole
 
           if ! aws iam get-role --role-name $LAMBDA_ROLE_NAME 2>/dev/null; then
             aws iam create-role --role-name $LAMBDA_ROLE_NAME --assume-role-policy-document "$ASSUME_ROLE_POLICY"
@@ -143,9 +148,9 @@ jobs:
         id: function
         if: false
         run: |
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ inputs.function_name }} --image-uri ${{ inputs.image_uri }} --region ${{ inputs.aws_region }} --query 'Version' --output text 2>/dev/null || \
+          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ steps.value.outputs.function_name }} --image-uri ${{ inputs.image_uri }} --region ${{ inputs.aws_region }} --query 'Version' --output text 2>/dev/null || \
             aws lambda create-function \
-              --function-name ${{ inputs.function_name }} \
+              --function-name ${{ steps.value.outputs.function_name }} \
               --package-type Image --code ImageUri=${{ inputs.image_uri }} \
               --role arn:aws:iam::${{ steps.aws.outputs.aws-account-id }}:role/${{ steps.role.outputs.name }} \
               --region ${{ inputs.aws_region }} \
@@ -155,14 +160,14 @@ jobs:
               --timeout ${{ inputs.timeout }} \
               --query 'Version' --output text)
 
-          echo "::notice title=Lambda Deployed::${{ inputs.function_name }}:$LAMBDA_VERSION"
+          echo "::notice title=Lambda Deployed::${{ steps.value.outputs.function_name }}:$LAMBDA_VERSION"
           echo "version=$LAMBDA_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Update Lambda URL 🛜
         if: false
         run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --region ${{ inputs.aws_region }} --query 'FunctionUrl' --output text 2>/dev/null || \
-          aws lambda create-function-url-config --function-name ${{ inputs.function_name }} --auth-type NONE --region ${{ inputs.aws_region }} --query 'FunctionUrl' --output text)
+          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ steps.value.outputs.function_name }} --auth-type NONE --region ${{ inputs.aws_region }} --query 'FunctionUrl' --output text 2>/dev/null || \
+          aws lambda create-function-url-config --function-name ${{ steps.value.outputs.function_name }} --auth-type NONE --region ${{ inputs.aws_region }} --query 'FunctionUrl' --output text)
 
           echo "::notice title=Host::$FUNCTION_HOST"
 
@@ -185,12 +190,12 @@ jobs:
             echo "::error title=Provisioned Concurrency Input Missing::provisioned concurrency input is missinng."
           fi
 
-          if ! aws lambda update-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ inputs.aws_region }} 2>/dev/null; then
-            aws lambda create-alias --function-name ${{ inputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ inputs.aws_region }}
+          if ! aws lambda update-alias --function-name ${{ steps.value.outputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ inputs.aws_region }} 2>/dev/null; then
+            aws lambda create-alias --function-name ${{ steps.value.outputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ inputs.aws_region }}
           fi
 
           aws lambda put-provisioned-concurrency-config \
-            --function-name ${{ inputs.function_name }} \
+            --function-name ${{ steps.value.outputs.function_name}} \
             --qualifier provisioned \
             --provisioned-concurrent-executions ${{ inputs.provisioned_concurrency }} \
             --region ${{ inputs.aws_region }}
