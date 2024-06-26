@@ -109,10 +109,10 @@
       }
     },
     "Outputs": {
-      "LambdaFunctionUrl": {
-        "Description": "URL of the deployed Lambda function",
+      "LambdaFunctionArn": {
+        "Description": "Arn of the deployed Lambda function",
         "Value": {
-          "Fn::GetAtt": "LambdaFunctionUrlConfig.FunctionUrl"
+          "Fn::GetAtt": "LambdaFunction.FunctionArn"
         }
       }
     }
