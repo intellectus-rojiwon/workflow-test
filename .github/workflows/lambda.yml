@@ -52,6 +52,8 @@ jobs:
       - name: Create Values
         id: value
         run: |
+          set -e
+
           FUNCTION_NAME=${{ inputs.name }}-${{ inputs.version }}
           ROLE_SESSION_NAME=$Lambda-$FUNCTION_NAME
           ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
