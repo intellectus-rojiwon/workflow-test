@@ -49,6 +49,8 @@ jobs:
           path: "workflow-test"
           ref: "main"
 
+      - run: aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text | cut -d ':' -f 2-
+
       - name: Create Values
         id: value
         run: |
@@ -64,14 +66,7 @@ jobs:
             PROVISIONED=${{ inputs.provisioned_concurrency }}
           fi
 
-          SHA_IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text)
-
-          if [ -z "$SHA_IMAGE_DIGEST" ]; then
-            echo "::error title=Image Not Found::ecr image not found"
-            exit 1
-          else
-            IMAGE_DIGEST=$(echo $SHA_IMAGE_DIGEST | cut -d ':' -f 2-)
-          fi
+          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text | cut -d ':' -f 2-)
 
           echo "function_name=$FUNCTION_NAME" >> "$GITHUB_OUTPUT"
           echo "image_digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
