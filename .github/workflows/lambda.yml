@@ -112,6 +112,8 @@ jobs:
 
             cloudformation.LambdaFunction.Properties.Environment = { Variables };
 
+            console.log(cloudformation);
+
             fs.writeFileSync(json_path, JSON.stringify(cloudformation, null, 2));
 
       - name: Deploy Lambda By Cloudformation 🛜
@@ -123,7 +125,7 @@ jobs:
             PROVISIONED=${{ inputs.provisioned_concurrency }}
           fi
 
-          VERSION_CODE=$(sha256sum "${{ inputs.aws_region }}-${{ inputs.function_name }}-${{ steps.image.outputs.uri }}-${{ inputs.architectures }}-${{ inputs.memory }}-${{ inputs.ephemeral_storage }}-$PROVISIONED" | cut -d " " -f 1)
+          VERSION_CODE=$(echo "${{ inputs.aws_region }}${{ inputs.function_name }}${{ steps.image.outputs.uri }}${{ inputs.architectures }}${{ inputs.memory }}${{ inputs.ephemeral_storage }}$PROVISIONED" | sha256sum | cut -d " " -f 1)
 
           STACK_NAME=lambda-${{ inputs.function_name }}-${{ inputs.aws_region }}
 
