@@ -57,11 +57,6 @@ jobs:
           path: "workflow-test"
           ref: "main"
 
-      - name: Setup NodeJS
-        uses: actions/setup-node@main
-        with:
-          node-version: "20"
-
       - name: Create Assume Role Session Name
         id: role-session
         run: |
@@ -107,7 +102,9 @@ jobs:
             const json_path = 'workflow-test/cloudformation.json';
 
             const cloudformation = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
-            console.log(cloudformation);
+            console.log(cloudformation.Resources);
+            console.log('----');
+            console.log(cloudformation.Resources.LambdaFunction);
             const original = cloudformation.Resources.LambdaFunction.Properties.Environment?.Variables ?? {};
             const Variables = {...original, ...inputs };
 
