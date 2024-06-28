@@ -3,42 +3,50 @@ name: Lambda Function ƛ
 on:
   workflow_call:
     inputs:
-      aws_region: # ap-northeast-2
+      aws_region:
         required: true
         type: string
-      role_to_assume:
+      assume_role_arn:
         required: true
         type: string
-
-      name:
-        required: true
-        type: string
-      version:
+      function_name:
         required: true
         type: string
 
-      image_uri: # include tag
+      ecr_aws_region:
+        required: true
+        type: string
+      ecr_registry_id:
+        required: true
+        type: string
+      ecr_repository:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+
+      architectures: # e.g. x86_64
         required: true
         type: string
       memory: # e.g. 1024
         required: true
         type: number
-      architectures: # e.g. x86_64
-        required: true
-        type: string
       ephemeral_storage: # e.g. 512
         required: true
         type: number
       timeout: # e.g. 6
         required: true
         type: number
-
       provisioned_concurrency: # 3
         required: false
         type: number
+      environment:
+        required: false
+        type: string
 
 jobs:
-  deploy:
+  depoly:
     runs-on: ubuntu-latest
 
     steps:
@@ -49,165 +57,98 @@ jobs:
           path: "workflow-test"
           ref: "main"
 
-      - name: Create Values
-        id: value
-        run: |
-          FUNCTION_NAME=${{ inputs.name }}-${{ inputs.version }}
-          ROLE_SESSION_NAME=$Lambda-$FUNCTION_NAME
-          ROLE_REVOKE_POLICY=RevokeSession-$ROLE_SESSION_NAME
+      - name: Setup NodeJS
+        uses: actions/setup-node@main
+        with:
+          node-version: "20"
 
+      - name: Create Assume Role Session Name
+        id: role-session
+        run: |
+          ROLE_SESSION_NAME=Lambda-${{ inputs.function_name }}
+          echo "name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials 🔑
+        uses: aws-actions/configure-aws-credentials@main
+        id: aws
+        with:
+          role-to-assume: ${{ inputs.assume_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+          role-session-name: ${{ steps.role-session.outputs.name }}
+          output-credentials: true
+
+      - name: Get Docker Image URI By Tag 🐳
+        id: image
+        run: |
+          IMAGE_DIGEST=$(aws ecr descibe-images --region ${{ inputs.ecr_aws_region }} --registry-id ${{ inputs.ecr_registry_id }} --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
+          IMAGE_BASE=${{ inputs.ecr_registry_id }}.dkr.ecr.${{ inputs.ecr_aws_region }}.amazonaws.com/${{ inputs.ecr_repository }}
+
+          if [ -z "$IMAGE_DIGEST" ]; then
+            echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@${{ inputs.image_tag }}"
+            exit 1
+          else
+            IMAGE_URI=$IMAGE_BASE@$IMAGE_DIGEST
+          fi
+
+          echo "uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+      - name: Add Environment
+        run: |
+          const inputs = "${{ inputs.environment }}";
+          if(inputs === "") return;
+
+          const fs = require('fs');
+          const path = require('path');
+
+          const json_path = 'workflow-test/cloudformation.json'
+
+          const cloudformation = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
+          const original = cloudformation.LambdaFunction.Properties.Environment?.Variables ?? {};
+          const input_variables = JSON.parse(inputs);
+          const Variables = {...original, ...input_variables };
+
+          cloudformation.LambdaFunction.Properties.Environment = { Variables }; 
+
+          fs.writeFileSync(json_path, JSON.stringify(cloudformation, null, 2));
+
+      - name: Deploy Lambda By Cloudformation 🛜
+        id: cloudformation
+        run: |
           if [ -z "${{ inputs.provisioned_concurrency }}" ]; then
             PROVISIONED=0
           else
             PROVISIONED=${{ inputs.provisioned_concurrency }}
           fi
 
-          echo "function_name=$FUNCTION_NAME" >> "$GITHUB_OUTPUT"
-          echo "provisioned_concurrency=$PROVISIONED" >> "$GITHUB_OUTPUT"
-          echo "role_session_name=$ROLE_SESSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "role_policy_name=$ROLE_REVOKE_POLICY" >> "$GITHUB_OUTPUT"
+          VERSION_CODE=$(sha256sum "${{ inputs.aws_region }}-${{ inputs.function_name }}-${{ steps.image.outputs.uri }}-${{ inputs.architectures }}-${{ inputs.memory }}-${{ inputs.ephemeral_storage }}-$PROVISIONED" | cut -d " " -f 1)
 
-      - name: Configure AWS credentials 🔑
-        uses: aws-actions/configure-aws-credentials@main
-        id: aws
-        with:
-          role-to-assume: ${{ inputs.role_to_assume }}
-          aws-region: ${{ inputs.aws_region }}
-          role-session-name: ${{ steps.value.outputs.role_session_name }}
-          output-credentials: true
+          STACK_NAME=lambda-${{ inputs.function_name }}-${{ inputs.aws_region }}
 
-      - name: Deploy Cloudformation
-        run: |
-          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ inputs.name }} --image-ids imageTag=${{ inputs.version }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null | cut -d ':' -f 2-)
-
-          if [ -z "$IMAGE_DIGEST" ]; then
-              echo "::error title=Image Not Found::ecr image not found tag=${{ inputs.version }}"
-              exit 1
-          fi
+          echo "stack_name=$STACK_NAME" >> "$GITHUB_OUTPUT"
 
           aws cloudformation deploy \
             --template-file workflow-test/cloudformation.json \
-            --stack-name lambda-${{ inputs.aws_region }}-${{ steps.value.outputs.function_name }} \
+            --stack-name $STACK_NAME \
             --parameter-overrides \
-              LambdaFunctionName=${{ steps.value.outputs.function_name }} \
-              LambdaImageUri=${{ inputs.image_uri }}:${{ inputs.version }} \
-              LambdaArchitectures=${{ inputs.architectures }} \
-              LambdaMemorySize=${{ inputs.memory }} \
-              LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
-              LambdaTimeout=${{ inputs.timeout }} \
-              LambdaVersionCode=$IMAGE_DIGEST \
-              ProvisionedConcurrency=${{ steps.value.outputs.provisioned_concurrency }} \
+                LambdaFunctionName=${{ inputs.function_name }} \
+                LambdaImageUri=${{ steps.image.outputs.uri }} \
+                LambdaArchitectures=${{ inputs.architectures }} \
+                LambdaMemorySize=${{ inputs.memory }} \
+                LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
+                LambdaTimeout=${{ inputs.timeout }} \
+                LambdaVersionCode=$VERSION_CODE \
+                ProvisionedConcurrency=$PROVISIONED \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 
-      - name: Init Role for Lambda 🛡️
-        id: role
-        if: false
-        run: |
-          INLINE_POLICY='{
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Action": "logs:CreateLogGroup",
-                "Resource": "arn:aws:logs:${{ inputs.aws_region }}:${{ steps.aws.outputs.aws-account-id }}:*"
-              },
-              {
-                "Effect": "Allow",
-                "Action": [
-                  "logs:CreateLogStream",
-                  "logs:PutLogEvents"
-                ],
-                "Resource": [
-                  "arn:aws:logs:${{ inputs.aws_region }}:${{ steps.aws.outputs.aws-account-id }}:log-group:/aws/lambda/${{ steps.value.outputs.function_name }}:*"
-                ]
-              }
-            ]
-          }'
-
-          ASSUME_ROLE_POLICY='{
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Principal": {
-                  "Service": "lambda.amazonaws.com"  
-                },
-                "Action": "sts:AssumeRole"
-              } 
-            ]
-          }'
-
-          LAMBDA_ROLE_NAME=${{ steps.value.outputs.function_name }}-${{ inputs.aws_region }}-lambdaExecutionRole
-
-          if ! aws iam get-role --role-name $LAMBDA_ROLE_NAME 2>/dev/null; then
-            aws iam create-role --role-name $LAMBDA_ROLE_NAME --assume-role-policy-document "$ASSUME_ROLE_POLICY"
-            aws iam put-role-policy --role-name $LAMBDA_ROLE_NAME --policy-name "AWSLambdaBasicExecutionRolePolicy" --policy-document "$INLINE_POLICY"
-          fi
-
-          echo "name=$LAMBDA_ROLE_NAME" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy Lambda 📌
-        id: function
-        if: false
-        run: |
-          LAMBDA_VERSION=$(aws lambda update-function-code --function-name ${{ steps.value.outputs.function_name }} --image-uri ${{ inputs.image_uri }} --region ${{ inputs.aws_region }} --query 'Version' --output text 2>/dev/null || \
-            aws lambda create-function \
-              --function-name ${{ steps.value.outputs.function_name }} \
-              --package-type Image --code ImageUri=${{ inputs.image_uri }} \
-              --role arn:aws:iam::${{ steps.aws.outputs.aws-account-id }}:role/${{ steps.role.outputs.name }} \
-              --region ${{ inputs.aws_region }} \
-              --architectures ${{ inputs.architectures }} \
-              --memory-size ${{ inputs.memory }} \
-              --ephemeral-storage Size=${{ inputs.ephemeral_storage }} \
-              --timeout ${{ inputs.timeout }} \
-              --query 'Version' --output text)
-
-          echo "::notice title=Lambda Deployed::${{ steps.value.outputs.function_name }}:$LAMBDA_VERSION"
-          echo "version=$LAMBDA_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Update Lambda URL 🛜
-        if: false
-        run: |
-          FUNCTION_HOST=$(aws lambda get-function-url-config --function-name ${{ steps.value.outputs.function_name }} --auth-type NONE --region ${{ inputs.aws_region }} --query 'FunctionUrl' --output text 2>/dev/null || \
-          aws lambda create-function-url-config --function-name ${{ steps.value.outputs.function_name }} --auth-type NONE --region ${{ inputs.aws_region }} --query 'FunctionUrl' --output text)
-
-          echo "::notice title=Host::$FUNCTION_HOST"
-
-      - name: Check Provisioned Concurrency
-        if: false
-        id: provisioned
-        run: |
-          if[ -z "${{ inputs.provisioned_concurrency }}" ]; then
-            check=false
-          else
-            check=true
-          fi
-
-          echo "check=$check" >> "$GITHUB_OUTPUT"
-
-      - name: Provisioned Concurrency 👥
-        if: steps.provisioned.outputs.check == true && false
-        run: |
-          if[ -z "${{ inputs.provisioned_concurrency }}" ]; then
-            echo "::error title=Provisioned Concurrency Input Missing::provisioned concurrency input is missinng."
-          fi
-
-          if ! aws lambda update-alias --function-name ${{ steps.value.outputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ inputs.aws_region }} 2>/dev/null; then
-            aws lambda create-alias --function-name ${{ steps.value.outputs.function_name }} --name provisioned --function-version ${{ steps.function.outputs.version }} --region ${{ inputs.aws_region }}
-          fi
-
-          aws lambda put-provisioned-concurrency-config \
-            --function-name ${{ steps.value.outputs.function_name}} \
-            --qualifier provisioned \
-            --provisioned-concurrent-executions ${{ inputs.provisioned_concurrency }} \
-            --region ${{ inputs.aws_region }}
+            echo "::notice title=Cloudformation Stack Name::$STACK_NAME"
 
       - name: Revoke AWS Role Session 🔒
+        if: always() && steps.aws.outcome == 'success'
         run: |
-          ROLE_NAME=$(echo ${{ inputs.role_to_assume }} | cut -d '/' -f 2-)
-          ROLE_SESSION_NAME=${{ steps.value.outputs.role_session_name }}
-          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") 
+          ROLE_NAME=$(echo ${{ inputs.assume_role_arn }} | cut -d '/' -f 2-)
+          ROLE_SESSION_NAME=${{ steps.role-session.outputs.name }}
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           INLINE_POLICY='{
             "Version": "2012-10-17",
@@ -218,7 +159,7 @@ jobs:
                 "Resource": ["*"],
                 "Condition": {
                   "DateLessThan": {
-                    "aws:TokenIssueTime": "'"$CURRENT_TIME"'"
+                    "aws:TokenIssueTime": "'"$NOW"'"
                   },
                   "StringEquals": {
                     "sts:RoleSessionName": "'"$ROLE_SESSION_NAME"'"
@@ -228,6 +169,11 @@ jobs:
             ]
           }'
 
-          aws iam put-role-policy --role-name $ROLE_NAME --policy-name ${{ steps.value.outputs.role_policy_name }} --policy-document "$INLINE_POLICY"
+          aws iam put-role-policy --role-name $ROLE_NAME --policy-name RevokeSession-$ROLE_SESSION_NAME --policy-document "$INLINE_POLICY"
 
-          echo "::notice title=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"
+          echo "::notice tile=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"
+
+      - name: Notice Lambda FunctionUrl 📋
+        run: |
+          FUNCTION_URL=$(aws cloudformation describe-stacks --stack-name ${{ steps.cloudformation.outputs.stack_name }} --query "Stacks[0].Outputs[?OutputKey=='LambdaFunctionUrl'].OutputValue" --output text)
+          echo "::notice title=Lambda Function Url::${{ steps.cloudformation.outputs.stack_name }}"
