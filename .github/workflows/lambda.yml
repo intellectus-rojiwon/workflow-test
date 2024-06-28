@@ -97,7 +97,8 @@ jobs:
         uses: actions/github-script@main
         with:
           script: |
-            const inputs = ${{ inputs.environment }};
+
+            const inputs = ((input) => input)(${{ inputs.environment }});
             if(inputs === undefined) return;
 
             const fs = require('fs');
@@ -106,12 +107,12 @@ jobs:
             const json_path = 'workflow-test/cloudformation.json';
 
             const cloudformation = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
-            const original = cloudformation.LambdaFunction.Properties.Environment?.Variables ?? {};
+            console.log(cloudformation);
+            const original = cloudformation.Resources.LambdaFunction.Properties.Environment?.Variables ?? {};
             const Variables = {...original, ...inputs };
 
             cloudformation.LambdaFunction.Properties.Environment = { Variables };
 
-            console.log(cloudformation);
 
             fs.writeFileSync(json_path, JSON.stringify(cloudformation, null, 2));
 
