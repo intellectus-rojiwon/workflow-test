@@ -25,22 +25,28 @@ on:
       image_tag:
         required: false
         type: string
+        default: latest
 
       architectures: # e.g. x86_64
         required: false
         type: string
+        default: x86_64
       memory: # e.g. 1024
         required: false
         type: number
+        default: 1024
       ephemeral_storage: # e.g. 512
         required: false
         type: number
+        default: 512
       timeout: # e.g. 6
         required: false
         type: number
+        default: 6
       provisioned_concurrency: # 3
         required: false
         type: number
+        default: 0
       environment:
         required: false
         type: string
