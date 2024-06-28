@@ -24,7 +24,7 @@ jobs:
 
       - name: action test
         id: lambda
-        uses: intellectus-rojiwon/workflow-lambda-deploy@main
+        uses: rojiwon123/deploy-lambda@main
         with:
           function-name: lambda-deploy-test
           ecr-repository: workflow-test
