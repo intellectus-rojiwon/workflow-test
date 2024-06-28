@@ -70,9 +70,10 @@ jobs:
             exit 0
           fi
 
+          IMAGE_TAG=${{ inputs.image_tag }}
           docker build -t $IMAGE_URI:${{ inputs.image_tag }} .
           docker push $IMAGE_URI:${{ inputs.image_tag }}
-          echo "::notice title=Image Created::$IMAGE_URI:${{ inputs.image_tag }}"
+          echo "::notice title=Image Created::$IMAGE_URI:$IMAGE_TAG"
 
       - name: Revoke AWS Role Session 🔒
         if: always() && steps.aws.outcome == 'success'
@@ -102,4 +103,4 @@ jobs:
 
           aws iam put-role-policy --role-name $ROLE_NAME --policy-name RevokeSession-$ROLE_SESSION_NAME --policy-document "$INLINE_POLICY"
 
-          echo "::notice tile=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"
+          echo "::notice title=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"

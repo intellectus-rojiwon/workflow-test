@@ -80,13 +80,13 @@ jobs:
       - name: Get Docker Image URI By Tag 🐳
         id: image
         run: |
-          IMAGE_DIGEST=$(aws ecr descibe-images --region ${{ inputs.ecr_aws_region }} --registry-id ${{ inputs.ecr_registry_id }} --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
+          IMAGE_DIGEST=$(aws ecr describe-images --region ${{ inputs.ecr_aws_region }} --registry-id ${{ inputs.ecr_registry_id }} --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
           IMAGE_BASE="${{ inputs.ecr_registry_id }}.dkr.ecr.${{ inputs.ecr_aws_region }}.amazonaws.com/${{ inputs.ecr_repository }}"
-
+          IMAGE_TAG=${{ inputs.image_tag }}
           echo "$IMAGE@$IMAGE_DIGEST"
 
           if [ -z "$IMAGE_DIGEST" ]; then
-            echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@${{ inputs.image_tag }}"
+            echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@$IMAGE_TAG"
             exit 1
           fi
 
@@ -173,7 +173,7 @@ jobs:
 
           aws iam put-role-policy --role-name $ROLE_NAME --policy-name RevokeSession-$ROLE_SESSION_NAME --policy-document "$INLINE_POLICY"
 
-          echo "::notice tile=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"
+          echo "::notice title=Revoke Role Session::$ROLE_NAME/$ROLE_SESSION_NAME"
 
       - name: Notice Lambda FunctionUrl 📋
         run: |
