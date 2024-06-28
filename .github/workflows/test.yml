@@ -28,4 +28,5 @@ jobs:
         with:
           function-name: test
           ecr-repository: workflow-test
+          image-tag: "dev"
           ecr-registry-id: ${{ steps.aws.outputs.aws-account-id }}
