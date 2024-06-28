@@ -16,7 +16,6 @@ on:
       ecr_aws_region:
         required: false
         type: string
-        default: ${{ inputs.aws_region }}
       ecr_registry_id:
         required: false
         type: string
@@ -28,23 +27,23 @@ on:
         type: string
         default: latest
 
-      architectures: # e.g. x86_64
+      architectures:
         required: false
         type: string
         default: x86_64
-      memory: # e.g. 1024
+      memory:
         required: false
         type: number
         default: 1024
-      ephemeral_storage: # e.g. 512
+      ephemeral_storage:
         required: false
         type: number
         default: 512
-      timeout: # e.g. 6
+      timeout:
         required: false
         type: number
         default: 6
-      provisioned_concurrency: # 3
+      provisioned_concurrency:
         required: false
         type: number
         default: 0
@@ -94,17 +93,11 @@ jobs:
             AWS_ECR_REGION=${{ inputs.ecr_aws_region }}
           fi
 
-          if [ -z "${{ inputs.image_tag }}" ]; then
-            AWS_ECR_IMAGE_TAG=latest
-          else
-            AWS_ECR_IMAGE_TAG=${{ inputs.image_tag }}
-          fi
-
-          IMAGE_DIGEST=$(aws ecr describe-images --region $AWS_ECR_REGION --registry-id $AWS_ECR_REGISTRY_ID --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=$AWS_ECR_IMAGE_TAG --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
+          IMAGE_DIGEST=$(aws ecr describe-images --region $AWS_ECR_REGION --registry-id $AWS_ECR_REGISTRY_ID --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
           IMAGE_BASE="$AWS_ECR_REGISTRY_ID.dkr.ecr.$AWS_ECR_REGION.amazonaws.com/${{ inputs.ecr_repository }}"
 
           if [ -z "$IMAGE_DIGEST" ]; then
-            echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@$AWS_ECR_IMAGE_TAG"
+            echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@${{ inputs.image_tag }}"
             exit 1
           fi
 
@@ -137,35 +130,6 @@ jobs:
       - name: Deploy Lambda By Cloudformation 🛜
         id: cloudformation
         run: |
-          if [ -z "${{ inputs.architectures }}" ]; then
-            AWS_LAMBDA_ARCHITECTURES="x86_64"
-          else
-            AWS_LAMBDA_ARCHITECTURES=${{ inputs.architectures }}
-          fi
-
-          if [ -z "${{ inputs.memory }}" ]; then
-            AWS_LAMBDA_MEMORY_SIZE=1024
-          else
-            AWS_LAMBDA_MEMORY_SIZE=${{ inputs.memory }}
-          fi
-
-          if [ -z "${{ inputs.ephemeral_storage }}" ]; then
-            AWS_LAMBDA_EPHEMERAL_STORAGE=512
-          else
-            AWS_LAMBDA_EPHEMERAL_STORAGE=${{ inputs.ephemeral_storage }}
-          fi
-
-          if [ -z "${{ inputs.timeout }}" ]; then
-            AWS_LAMBDA_TIMEOUT=6
-          else
-            AWS_LAMBDA_TIMEOUT=${{ inputs.timeout }}
-          fi
-
-          if [ -z "${{ inputs.provisioned_concurrency }}" ]; then
-            PROVISIONED=0
-          else
-            PROVISIONED=${{ inputs.provisioned_concurrency }}
-          fi
 
           STACK_NAME=lambda-${{ inputs.function_name }}-${{ inputs.aws_region }}
 
@@ -177,11 +141,11 @@ jobs:
             --parameter-overrides \
                 LambdaFunctionName=${{ inputs.function_name }} \
                 LambdaImageUri=${{ steps.image.outputs.uri }} \
-                LambdaArchitectures=$AWS_LAMBDA_ARCHITECTURES \
-                LambdaMemorySize=$AWS_LAMBDA_MEMORY_SIZE \
-                LambdaEphemeralStorageSize=$AWS_LAMBDA_EPHEMERAL_STORAGE \
-                LambdaTimeout=$AWS_LAMBDA_TIMEOUT \
-                ProvisionedConcurrency=$PROVISIONED \
+                LambdaArchitectures=${{ inputs.architectures }} \
+                LambdaMemorySize=${{ inputs.memory }} \
+                LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
+                LambdaTimeout=${{ inputs.timeout }} \
+                ProvisionedConcurrency=${{ inputs.provisioned_concurrency }} \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 

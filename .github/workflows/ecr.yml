@@ -52,30 +52,28 @@ jobs:
       - name: Check ECR Repository
         id: image
         run: |
-          REPOSITORY_NAME=${{ inputs.ecr_repository }}
 
-          if ! aws ecr describe-repositories --repository-names $REPOSITORY_NAME 2>/dev/null; then
-            aws ecr create-repository --repository-name $REPOSITORY_NAME --region ${{ inputs.aws_region }}
-            echo "::notice title=ECR Repository Created::${{ steps.ecr.outputs.registry }}/$REPOSITORY_NAME"
+          if ! aws ecr describe-repositories --repository-names ${{ inputs.ecr_repository }} --region ${{ inputs.aws_region }} 2>/dev/null; then
+            aws ecr create-repository --repository-name ${{ inputs.ecr_repository }} --region ${{ inputs.aws_region }}
+            echo "::notice title=ECR Repository Created::${{ steps.ecr.outputs.registry }}/${{ inputs.ecr_repository }}"
           fi
 
-          IMAGE_URI=${{ steps.ecr.outputs.registry }}/$REPOSITORY_NAME
+          IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ inputs.ecr_repository }}
           echo "uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
 
       - name: Build & Push Docker Image to Amazon ECR 🐳
         run: |
           IMAGE_URI=${{ steps.image.outputs.uri }}
 
-          if aws ecr describe-images --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} > /dev/null 2>&1; then
+          if aws ecr describe-images --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} --region ${{ inputs.aws_region }} > /dev/null 2>&1; then
             if [ ${{ inputs.override }} == false ]; then
               exit 0
             fi
           fi
 
-          IMAGE_TAG=${{ inputs.image_tag }}
           docker build -t $IMAGE_URI:${{ inputs.image_tag }} .
           docker push $IMAGE_URI:${{ inputs.image_tag }}
-          echo "::notice title=Image Created::$IMAGE_URI:$IMAGE_TAG"
+          echo "::notice title=Image Created::$IMAGE_URI:${{ inputs.image_tag }}"
 
       - name: Revoke AWS Role Session 🔒
         if: always() && steps.aws.outcome == 'success'
