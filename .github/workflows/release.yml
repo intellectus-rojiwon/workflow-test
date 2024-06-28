@@ -91,7 +91,7 @@ jobs:
       ephemeral_storage: 512
       timeout: 6
       environment: |
-        { NODE_ENV: "production", AWS_REGION: "${{ vars.AWS_REGION }}" }
+        { NODE_ENV: "production" }
 
   lambda_production:
     needs:
