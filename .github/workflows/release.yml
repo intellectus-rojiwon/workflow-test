@@ -112,3 +112,5 @@ jobs:
       ephemeral_storage: 512
       timeout: 30
       provisioned_concurrency: 3
+      environment: |
+        { NODE_ENV: "production" }
