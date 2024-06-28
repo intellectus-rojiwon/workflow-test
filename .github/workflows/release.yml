@@ -82,16 +82,9 @@ jobs:
       aws_region: ${{ vars.AWS_REGION }}
       assume_role_arn: "arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ASSUME_ROLE }}"
       function_name: ${{ needs.project.outputs.name }}-dev
-      ecr_aws_region: ${{ vars.AWS_REGION }}
-      ecr_registry_id: "${{ vars.AWS_ACCOUNT_ID }}"
       ecr_repository: ${{ needs.project.outputs.name }}
       image_tag: ${{ needs.project.outputs.version }}
-      architectures: x86_64
-      memory: 1024
-      ephemeral_storage: 512
-      timeout: 6
-      environment: |
-        { NODE_ENV: "production" }
+      environment: '{ NODE_ENV: "production" }'
 
   lambda_production:
     needs:
@@ -103,14 +96,9 @@ jobs:
       aws_region: ${{ vars.AWS_REGION }}
       assume_role_arn: "arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ASSUME_ROLE }}"
       function_name: ${{ needs.project.outputs.name }}-prod
-      ecr_aws_region: ${{ vars.AWS_REGION }}
-      ecr_registry_id: "${{ vars.AWS_ACCOUNT_ID }}"
       ecr_repository: ${{ needs.project.outputs.name }}
       image_tag: ${{ needs.project.outputs.version }}
-      architectures: x86_64
       memory: 4096
-      ephemeral_storage: 512
       timeout: 30
       provisioned_concurrency: 3
-      environment: |
-        { NODE_ENV: "production" }
+      environment: '{ NODE_ENV: "production" }'

@@ -14,29 +14,29 @@ on:
         type: string
 
       ecr_aws_region:
-        required: true
+        required: false
         type: string
       ecr_registry_id:
-        required: true
+        required: false
         type: string
       ecr_repository:
         required: true
         type: string
       image_tag:
-        required: true
+        required: false
         type: string
 
       architectures: # e.g. x86_64
-        required: true
+        required: false
         type: string
       memory: # e.g. 1024
-        required: true
+        required: false
         type: number
       ephemeral_storage: # e.g. 512
-        required: true
+        required: false
         type: number
       timeout: # e.g. 6
-        required: true
+        required: false
         type: number
       provisioned_concurrency: # 3
         required: false
@@ -75,12 +75,29 @@ jobs:
       - name: Get Docker Image URI By Tag 🐳
         id: image
         run: |
-          IMAGE_DIGEST=$(aws ecr describe-images --region ${{ inputs.ecr_aws_region }} --registry-id ${{ inputs.ecr_registry_id }} --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
-          IMAGE_BASE="${{ inputs.ecr_registry_id }}.dkr.ecr.${{ inputs.ecr_aws_region }}.amazonaws.com/${{ inputs.ecr_repository }}"
-          IMAGE_TAG=${{ inputs.image_tag }}
+          if [ -z "${{ inputs.ecr_registry_id }}" ]; then
+            AWS_ECR_REGISTRY_ID="${{ steps.aws.outputs.aws-account-id }}"
+          else
+            AWS_ECR_REGISTRY_ID="${{ inputs.ecr_registry_id }}"
+          fi
+
+          if [ -z "${{ inputs.ecr_aws_region }}" ]; then
+            AWS_ECR_REGION=${{ inputs.aws_region }}
+          else
+            AWS_ECR_REGION=${{ inputs.ecr_aws_region }}
+          fi
+
+          if [ -z "${{ inputs.image_tag }}" ]; then
+            AWS_ECR_IMAGE_TAG=latest
+          else
+            AWS_ECR_IMAGE_TAG=${{ inputs.image_tag }}
+          fi
+
+          IMAGE_DIGEST=$(aws ecr describe-images --region $AWS_ECR_REGION --registry-id $AWS_ECR_REGISTRY_ID --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=$AWS_ECR_IMAGE_TAG --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
+          IMAGE_BASE="$AWS_ECR_REGISTRY_ID.dkr.ecr.$AWS_ECR_REGION.amazonaws.com/${{ inputs.ecr_repository }}"
 
           if [ -z "$IMAGE_DIGEST" ]; then
-            echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@$IMAGE_TAG"
+            echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@$AWS_ECR_IMAGE_TAG"
             exit 1
           fi
 
@@ -113,6 +130,30 @@ jobs:
       - name: Deploy Lambda By Cloudformation 🛜
         id: cloudformation
         run: |
+          if [ -z "${{ inputs.architectures }}" ]; then
+            AWS_LAMBDA_ARCHITECTURES="x86_64"
+          else
+            AWS_LAMBDA_ARCHITECTURES=${{ inputs.architectures }}
+          fi
+
+          if [ -z "${{ inputs.memory }}" ]; then
+            AWS_LAMBDA_MEMORY_SIZE=1024
+          else
+            AWS_LAMBDA_MEMORY_SIZE=${{ inputs.memory }}
+          fi
+
+          if [ -z "${{ inputs.ephemeral_storage }}" ]; then
+            AWS_LAMBDA_EPHEMERAL_STORAGE=512
+          else
+            AWS_LAMBDA_EPHEMERAL_STORAGE=${{ inputs.ephemeral_storage }}
+          fi
+
+          if [ -z "${{ inputs.timeout }}" ]; then
+            AWS_LAMBDA_TIMEOUT=6
+          else
+            AWS_LAMBDA_TIMEOUT=${{ inputs.timeout }}
+          fi
+
           if [ -z "${{ inputs.provisioned_concurrency }}" ]; then
             PROVISIONED=0
           else
@@ -129,10 +170,10 @@ jobs:
             --parameter-overrides \
                 LambdaFunctionName=${{ inputs.function_name }} \
                 LambdaImageUri=${{ steps.image.outputs.uri }} \
-                LambdaArchitectures=${{ inputs.architectures }} \
-                LambdaMemorySize=${{ inputs.memory }} \
-                LambdaEphemeralStorageSize=${{ inputs.ephemeral_storage }} \
-                LambdaTimeout=${{ inputs.timeout }} \
+                LambdaArchitectures=$AWS_LAMBDA_ARCHITECTURES \
+                LambdaMemorySize=$AWS_LAMBDA_MEMORY_SIZE \
+                LambdaEphemeralStorageSize=$AWS_LAMBDA_EPHEMERAL_STORAGE \
+                LambdaTimeout=$AWS_LAMBDA_TIMEOUT \
                 ProvisionedConcurrency=$PROVISIONED \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
