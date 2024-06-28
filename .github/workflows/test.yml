@@ -23,8 +23,12 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: action test
+        id: lambda
         uses: intellectus-rojiwon/workflow-lambda-deploy@main
         with:
           function-name: lambda-deploy-test
           ecr-repository: workflow-test
-          image-tag: dev
+          image-tag: 1.0.3
+          environment: NODE_ENV=production
+
+      - run: echo "::notice title=Lambda Url::${{ steps.lambda.outputs.lambda_url }}"
