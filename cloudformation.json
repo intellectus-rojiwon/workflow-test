@@ -89,9 +89,6 @@
         "Properties": {
           "FunctionName": {
             "Ref": "LambdaFunctionName"
-          },
-          "CodeSha256": {
-            "Ref": "LambdaVersionCode"
           }
         }
       },

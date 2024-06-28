@@ -102,14 +102,11 @@ jobs:
             const json_path = 'workflow-test/cloudformation.json';
 
             const cloudformation = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
-            console.log(cloudformation.Resources);
-            console.log('----');
-            console.log(cloudformation.Resources.LambdaFunction);
-            const original = cloudformation.Resources.LambdaFunction.Properties.Environment?.Variables ?? {};
+            const properties = cloudformation.Resources.LambdaFunction.Properties;
+            const original = properties.Environment?.Variables ?? {};
             const Variables = {...original, ...inputs };
 
-            cloudformation.LambdaFunction.Properties.Environment = { Variables };
-
+            properties.Environment = { Variables };
 
             fs.writeFileSync(json_path, JSON.stringify(cloudformation, null, 2));
 
