@@ -178,10 +178,6 @@
         "Description": "Timeout for the Lambda function (in seconds)",
         "Default": 6
       },
-      "LambdaVersionCode": {
-        "Type": "String",
-        "Description": "Sha256 Code for Lambda Version Match"
-      },
       "ProvisionedConcurrency": {
         "Type": "Number",
         "Description": "Provisioned concurrency for the Lambda function",
