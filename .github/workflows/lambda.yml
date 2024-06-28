@@ -81,7 +81,9 @@ jobs:
         id: image
         run: |
           IMAGE_DIGEST=$(aws ecr descibe-images --region ${{ inputs.ecr_aws_region }} --registry-id ${{ inputs.ecr_registry_id }} --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)
-          IMAGE_BASE=${{ inputs.ecr_registry_id }}.dkr.ecr.${{ inputs.ecr_aws_region }}.amazonaws.com/${{ inputs.ecr_repository }}
+          IMAGE_BASE="${{ inputs.ecr_registry_id }}.dkr.ecr.${{ inputs.ecr_aws_region }}.amazonaws.com/${{ inputs.ecr_repository }}"
+
+          echo "$IMAGE@$IMAGE_DIGEST"
 
           if [ -z "$IMAGE_DIGEST" ]; then
             echo "::error title=Image Not Found::Can't found Docker IMAGE $IMAGE_BASE@${{ inputs.image_tag }}"
