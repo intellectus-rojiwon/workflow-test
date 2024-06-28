@@ -21,12 +21,10 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ASSUME_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-          output-credentials: true
 
       - name: action test
         uses: intellectus-rojiwon/workflow-lambda-deploy@main
         with:
-          function-name: test
+          function-name: lambda-deploy-test
           ecr-repository: workflow-test
-          image-tag: "dev"
-          ecr-registry-id: ${{ steps.aws.outputs.aws-account-id }}
+          image-tag: dev
