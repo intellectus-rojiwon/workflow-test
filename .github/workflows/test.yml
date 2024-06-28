@@ -27,5 +27,5 @@ jobs:
         uses: intellectus-rojiwon/workflow-lambda-deploy@main
         with:
           function-name: test
-          ecr-repository: test
+          ecr-repository: workflow-test
           ecr-registry-id: ${{ steps.aws.outputs.aws-account-id }}
