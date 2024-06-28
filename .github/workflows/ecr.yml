@@ -14,8 +14,9 @@ on:
         required: true
         type: string
       image_tag:
-        required: true
+        required: false
         type: string
+        default: latest
 
       override:
         required: true
