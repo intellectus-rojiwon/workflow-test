@@ -65,9 +65,10 @@ jobs:
         run: |
           IMAGE_URI=${{ steps.image.outputs.uri }}
 
-          if [ ${{ inputs.override }} == false ]; then
-            aws ecr describe-images --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }}
-            exit 0
+          if aws ecr describe-images --repository-name ${{ inputs.ecr_repository }} --image-ids imageTag=${{ inputs.image_tag }} > /dev/null 2>&1; then
+            if [ ${{ inputs.override }} == false ]; then
+              exit 0
+            fi
           fi
 
           IMAGE_TAG=${{ inputs.image_tag }}
