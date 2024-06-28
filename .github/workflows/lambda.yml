@@ -103,7 +103,7 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            const json_path = 'workflow-test/cloudformation.json'
+            const json_path = 'workflow-test/cloudformation.json';
 
             const cloudformation = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
             const original = cloudformation.LambdaFunction.Properties.Environment?.Variables ?? {};
