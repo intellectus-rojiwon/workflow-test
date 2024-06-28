@@ -172,4 +172,4 @@ jobs:
       - name: Notice Lambda FunctionUrl 📋
         run: |
           FUNCTION_URL=$(aws cloudformation describe-stacks --stack-name ${{ steps.cloudformation.outputs.stack_name }} --query "Stacks[0].Outputs[?OutputKey=='LambdaFunctionUrl'].OutputValue" --output text)
-          echo "::notice title=Lambda Function Url::${{ steps.cloudformation.outputs.stack_name }}"
+          echo "::notice title=Lambda Function Url::$FUNCTION_URL"
