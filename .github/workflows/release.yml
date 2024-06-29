@@ -29,7 +29,7 @@ jobs:
           overwrite: false
 
       - name: Deploy Lambda
-        uses: rojiwon123/deploy-lambda@dev
+        uses: rojiwon123/deploy-lambda@v1
         with:
           function-name: workflow-test
           function-url: true
