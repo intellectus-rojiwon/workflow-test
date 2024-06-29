@@ -29,11 +29,11 @@ jobs:
           overwrite: false
 
       - name: Deploy Lambda
-        uses: rojiwon123/deploy-lambda@v1
+        uses: rojiwon123/deploy-lambda@release/v1
         with:
           function-name: workflow-test
           function-url: true
           image-uri: ${{ steps.image.outputs.image_uri }}
           environment: |
             NODE_ENV=development
-            test
+            test=test
