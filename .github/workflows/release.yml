@@ -40,5 +40,6 @@ jobs:
           environment: |
             NODE_ENV=development
             test=test
+            DB_HOST=localhost
 
       - run: echo "${{ steps.lambda.outputs.lambda_url }}"
