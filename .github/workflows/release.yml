@@ -23,12 +23,12 @@ jobs:
 
       - name: Build & Push Docker Image 🐳
         id: image
-        uses: rojiwon123/build-and-push-image@v1.0.0
+        uses: rojiwon123/build-and-push-image@main
         with:
           repository-name: workflow-test
 
       - name: Deploy Lambda
-        uses: rojiwon123/deploy-lambda@v1
+        uses: rojiwon123/deploy-lambda@v1.0.0
         with:
           function-name: workflow-test
           function-url: true
