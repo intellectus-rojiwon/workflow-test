@@ -28,10 +28,11 @@ jobs:
           repository-name: workflow-test
 
       - name: Deploy Lambda
-        uses: rojiwon123/deploy-lambda@v1
+        uses: rojiwon123/deploy-lambda@dev
         with:
           function-name: workflow-test
           function-url: true
           image-uri: ${{ steps.image.outputs.image_uri }}
           environment: |
             NODE_ENV=development
+            test
