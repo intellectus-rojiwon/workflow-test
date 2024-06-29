@@ -1,7 +1,7 @@
 name: Release 🔖
 
 on:
-  workflow_dispatch:
+  push:
 
 permissions:
   id-token: write
@@ -23,7 +23,7 @@ jobs:
 
       - name: Build & Push Docker Image 🐳
         id: image
-        uses: rojiwon123/build-and-push-image@main
+        uses: rojiwon123/build-and-push-image@v1.0.0
         with:
           repository-name: workflow-test
 
