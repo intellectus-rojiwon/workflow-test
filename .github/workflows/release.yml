@@ -28,7 +28,10 @@ jobs:
           repository-name: workflow-test
           overwrite: false
 
+      - run: echo "${{ steps.image.outputs.image_uri }}"
+
       - name: Deploy Lambda
+        id: lambda
         uses: rojiwon123/deploy-lambda@v1
         with:
           function-name: workflow-test
@@ -37,3 +40,5 @@ jobs:
           environment: |
             NODE_ENV=development
             test=test
+
+      - run: echo "${{ steps.lambda.outputs.lambda_url }}"
