@@ -32,14 +32,12 @@ jobs:
 
       - name: Deploy Lambda
         id: lambda
-        uses: rojiwon123/deploy-lambda@v1
+        uses: rojiwon123/deploy-lambda@feat/add-cf
         with:
           function-name: workflow-test
-          function-url: true
+          host: function-url
           image-uri: ${{ steps.image.outputs.image_uri }}
           environment: |
             NODE_ENV=development
             test=test
             DB_HOST=localhost
-
-      - run: echo "${{ steps.lambda.outputs.lambda_url }}"
