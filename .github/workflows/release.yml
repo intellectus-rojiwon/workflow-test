@@ -35,9 +35,10 @@ jobs:
         uses: rojiwon123/deploy-lambda@feat/add-cf
         with:
           function-name: workflow-test
-          host: function-url
+          host: www.example.com
+          provisioned-concurrency: 1
           image-uri: ${{ steps.image.outputs.image_uri }}
           environment: |
-            NODE_ENV=development
+            NODE_ENV=production
             test=test
             DB_HOST=localhost
