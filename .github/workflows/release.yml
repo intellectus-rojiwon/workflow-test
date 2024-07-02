@@ -33,9 +33,10 @@ jobs:
         uses: rojiwon123/deploy-lambda@feat/add-cf
         with:
           function-name: workflow-test
-          host: test.workflow.intellectus.software
+          host-mode: CUSTOM_DOMAIN
+          domain: test.workflow.intellectus.software
           hosted-zone-id: Z0562300ID5KBQCHDSTV
-          acm-arn: arn:aws:acm:us-east-1:525355314827:certificate/fc0abd0d-e76f-4956-864c-8599c471492a
+          certificate-arn: arn:aws:acm:us-east-1:525355314827:certificate/fc0abd0d-e76f-4956-864c-8599c471492a
           provisioned-concurrency: 1
           image-uri: ${{ steps.image.outputs.image_uri }}
           environment: |
