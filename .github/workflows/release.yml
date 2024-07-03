@@ -37,7 +37,7 @@ jobs:
           domain: test.workflow.intellectus.software
           hosted-zone-id: Z0562300ID5KBQCHDSTV
           certificate-arn: arn:aws:acm:us-east-1:525355314827:certificate/fc0abd0d-e76f-4956-864c-8599c471492a
-          provisioned-concurrency: 1
+          provisioned-concurrency: 0
           image-uri: ${{ steps.image.outputs.image_uri }}
           environment: |
             NODE_ENV=production
