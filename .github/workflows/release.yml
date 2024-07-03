@@ -26,7 +26,7 @@ jobs:
         uses: rojiwon123/build-and-push-image@v1
         with:
           repository-name: workflow-test
-          overwrite: false
+          overwrite: true
 
       - name: Deploy Lambda
         id: lambda
