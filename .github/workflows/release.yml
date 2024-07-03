@@ -43,3 +43,5 @@ jobs:
             NODE_ENV=production
             test=test
             DB_HOST=localhost
+
+      - run: echo ${{ steps.lambda.outputs.host }}
