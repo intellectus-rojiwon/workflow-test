@@ -26,7 +26,7 @@ jobs:
         uses: rojiwon123/build-and-push-image@v1
         with:
           repository-name: workflow-test
-          image-tag: 1.0.1
+          image-tag: 1.0.0
           overwrite: false
 
       - name: Deploy Lambda
