@@ -30,7 +30,7 @@ jobs:
 
       - name: Deploy Lambda
         id: lambda
-        uses: rojiwon123/deploy-lambda@feat/add-cf
+        uses: rojiwon123/deploy-mono-lambda@v1
         with:
           function-name: workflow-test
           host-mode: CUSTOM_DOMAIN
