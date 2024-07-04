@@ -23,11 +23,11 @@ jobs:
 
       - name: Build & Push Docker Image 🐳
         id: image
-        uses: rojiwon123/build-and-push-image@v1
+        uses: deploy-actions/push-to-ecr@v1
         with:
           repository-name: workflow-test
           image-tag: 1.0.1
-          overwrite: false
+          overwrite: true
 
       - name: Deploy Lambda
         id: lambda
