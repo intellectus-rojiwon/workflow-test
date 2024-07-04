@@ -31,13 +31,15 @@ jobs:
 
       - name: Deploy Lambda
         id: lambda
-        uses: rojiwon123/deploy-mono-lambda@v1
+        uses: deploy-actions/mono-lambda@v1
         with:
           function-name: workflow-test
-          host-mode: FUNCTION_URL
-          domain: test.workflow.intellectus.software
+          host-mode: CUSTOM_DOMAIN
+          domains: |
+            workflow.intellectus.software
+            *.workflow.intellectus.software
           hosted-zone-id: Z0562300ID5KBQCHDSTV
-          certificate-arn: arn:aws:acm:us-east-1:525355314827:certificate/fc0abd0d-e76f-4956-864c-8599c471492a
+          certificate-arn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
           image-uri: ${{ steps.image.outputs.image_uri }}
           environment: |
             NODE_ENV=production
