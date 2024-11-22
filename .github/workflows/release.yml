@@ -30,19 +30,16 @@ jobs:
           overwrite: false
 
       - name: Deploy Lambda
-        id: lambda
-        uses: deploy-actions/mono-lambda@v1
+        uses: deploy-actions/lambda-api@main
         with:
-          function-name: workflow-test
-          host-mode: CUSTOM_DOMAIN
-          domains: |
-            workflow.intellectus.software
-            *.workflow.intellectus.software
-          hosted-zone-id: Z0562300ID5KBQCHDSTV
-          certificate-arn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
-          image-uri: ${{ steps.image.outputs.image_uri }}
-          environment: |
-            NODE_ENV=production
-            DB_HOST=localhost
-
-      - run: echo ${{ steps.lambda.outputs.host }}
+          Name: workflow-test
+          ImageUri: ${{ steps.image.outputs.image_uri }}
+          Aliases: |
+            - workflow.intellectus.software
+            - *.workflow.intellectus.software
+          HostedZoneId: Z0562300ID5KBQCHDSTV
+          AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
+          Environment: |
+            Variables:
+              NODE_ENV=production
+              DB_HOST=localhost
