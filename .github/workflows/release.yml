@@ -34,12 +34,12 @@ jobs:
         with:
           Name: workflow-test
           ImageUri: ${{ steps.image.outputs.image_uri }}
-          Aliases: |
+          Aliases: >
             - workflow.intellectus.software
             - *.workflow.intellectus.software
           HostedZoneId: Z0562300ID5KBQCHDSTV
           AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
-          Environment: |
+          Environment: >
             Variables:
               NODE_ENV=production
               DB_HOST=localhost
