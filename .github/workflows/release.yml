@@ -27,7 +27,7 @@ jobs:
         with:
           Name: workflow-test
           IfNotExist: latest
-          Tags: 1.0.2
+          Tags: 1.0.3
 
       - name: Deploy Lambda
         uses: deploy-actions/lambda-api@main
