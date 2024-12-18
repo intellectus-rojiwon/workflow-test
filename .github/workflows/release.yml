@@ -27,6 +27,7 @@ jobs:
         with:
           Name: workflow-test
           IfNotExist: latest
+          TagMutability: IMMUTABLE
           Tags: 1.0.3
 
       - name: Deploy Lambda
