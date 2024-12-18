@@ -23,17 +23,15 @@ jobs:
 
       - name: Build & Push Docker Image 🐳
         id: image
-        uses: deploy-actions/push-to-ecr@v1
+        uses: deploy-actions/build-push-ecr@main
         with:
-          repository-name: workflow-test
-          image-tag: 1.0.2
-          overwrite: false
+          Name: workflow-test
 
       - name: Deploy Lambda
         uses: deploy-actions/lambda-api@main
         with:
           Name: workflow-test
-          ImageUri: ${{ steps.image.outputs.image_uri }}
+          ImageUri: ${{ steps.image.outputs.ImageUri }}
           Aliases: |
             - workflow.intellectus.software
             - "*.workflow.intellectus.software"
