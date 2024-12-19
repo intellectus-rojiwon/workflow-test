@@ -39,7 +39,7 @@ jobs:
 
       - name: Docker Test
         id: image
-        run: docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest --platform linux/amd64 --push .
+        run: docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest --platform linux/amd64 --push --no-cache .
           
           
       # - name: Deploy Lambda
