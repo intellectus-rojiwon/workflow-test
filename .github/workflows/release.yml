@@ -40,7 +40,7 @@ jobs:
       - name: Docker Test
         id: image
         run: |
-          docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest -o type=registry --push .
+          docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest -o type=docker --push .
           docker images
           
           
