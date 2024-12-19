@@ -48,19 +48,22 @@ jobs:
           tags: ${{ steps.image.outputs.uri }}
 
       - name: Docker Push
-        run: docker push ${{ steps.image.outputs.uri }}
+        id: digest
+        run: |
+          docker push ${{ steps.image.outputs.uri }}
+          echo "image=$(docker inspect --format '{{.RepoDigests 0}}' ${{ steps.image.outputs.uri }})" >> "$GITHUB_OUTPUT"
           
-      # - name: Deploy Lambda
-      #   uses: deploy-actions/lambda-api@main
-      #   with:
-      #     Name: workflow-test
-      #     ImageUri: ${{ steps.image.outputs.uri }}
-      #     Aliases: |
-      #       - workflow.intellectus.software
-      #       - "*.workflow.intellectus.software"
-      #     HostedZoneId: Z0562300ID5KBQCHDSTV
-      #     AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
-      #     Environment: |
-      #       Variables:
-      #         NODE_ENV: production
-      #         DB_HOST: localhost
+      - name: Deploy Lambda
+        uses: deploy-actions/lambda-api@main
+        with:
+          Name: workflow-test
+          ImageUri: ${{ steps.digest.outputs.image }}
+          Aliases: |
+            - workflow.intellectus.software
+            - "*.workflow.intellectus.software"
+          HostedZoneId: Z0562300ID5KBQCHDSTV
+          AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
+          Environment: |
+            Variables:
+              NODE_ENV: production
+              DB_HOST: localhost
