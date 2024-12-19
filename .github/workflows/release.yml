@@ -21,26 +21,37 @@ jobs:
           role-to-assume: ${{ vars.AWS_ASSUME_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Build & Push Docker Image 🐳
-        id: image
-        uses: deploy-actions/build-push-ecr@main
-        with:
-          Name: workflow-test
-          IfNotExist: latest
-          TagMutability: IMMUTABLE
-          Tags: 1.0.3
+      # - name: Build & Push Docker Image 🐳
+      #   id: image
+      #   uses: deploy-actions/build-push-ecr@main
+      #   with:
+      #     Name: workflow-test
+      #     IfNotExist: latest
+      #     TagMutability: IMMUTABLE
+      #     Tags: 1.0.3
 
-      - name: Deploy Lambda
-        uses: deploy-actions/lambda-api@main
-        with:
-          Name: workflow-test
-          ImageUri: ${{ steps.image.outputs.ImageUri }}
-          Aliases: |
-            - workflow.intellectus.software
-            - "*.workflow.intellectus.software"
-          HostedZoneId: Z0562300ID5KBQCHDSTV
-          AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
-          Environment: |
-            Variables:
-              NODE_ENV: production
-              DB_HOST: localhost
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+          
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Test
+        run: |
+          docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest .
+          docker push ${{ steps.ecr.outputs.registry }}/workflow-test:latest
+      # - name: Deploy Lambda
+      #   uses: deploy-actions/lambda-api@main
+      #   with:
+      #     Name: workflow-test
+      #     ImageUri: ${{ steps.image.outputs.ImageUri }}
+      #     Aliases: |
+      #       - workflow.intellectus.software
+      #       - "*.workflow.intellectus.software"
+      #     HostedZoneId: Z0562300ID5KBQCHDSTV
+      #     AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
+      #     Environment: |
+      #       Variables:
+      #         NODE_ENV: production
+      #         DB_HOST: localhost
