@@ -37,10 +37,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Docker Test
+      - name: Tag
         id: image
-        run: docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest --platform linux/amd64 --push --no-cache .
-          
+        run: echo "uri=${{ steps.ecr.outputs.registry }}/workflow-test:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Docker Build
+        uses: docker/build-push-action@v6
+        with: 
+          load: true
+          tags: ${{ steps.image.outputs.uri }}
+
+      - name: Docker Push
+        run: docker push ${{ steps.image.outputs.uri }}
           
       # - name: Deploy Lambda
       #   uses: deploy-actions/lambda-api@main
