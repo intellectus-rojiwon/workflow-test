@@ -38,14 +38,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Docker Test
+        id: image
         run: |
           docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest --push .
+          echo "uri=${{ steps.ecr.outputs.registry }}/workflow-test:latest" >> "$GITHUB_OUTPUT"
           
       - name: Deploy Lambda
         uses: deploy-actions/lambda-api@main
         with:
           Name: workflow-test
-          ImageUri: ${{ steps.image.outputs.ImageUri }}
+          ImageUri: ${{ steps.image.outputs.uri }}
           Aliases: |
             - workflow.intellectus.software
             - "*.workflow.intellectus.software"
