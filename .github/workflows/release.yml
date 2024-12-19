@@ -40,20 +40,21 @@ jobs:
       - name: Docker Test
         id: image
         run: |
-          docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest --push .
-          echo "uri=${{ steps.ecr.outputs.registry }}/workflow-test:latest" >> "$GITHUB_OUTPUT"
+          docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest -o type=registry --push .
+          docker images
           
-      - name: Deploy Lambda
-        uses: deploy-actions/lambda-api@main
-        with:
-          Name: workflow-test
-          ImageUri: ${{ steps.image.outputs.uri }}
-          Aliases: |
-            - workflow.intellectus.software
-            - "*.workflow.intellectus.software"
-          HostedZoneId: Z0562300ID5KBQCHDSTV
-          AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
-          Environment: |
-            Variables:
-              NODE_ENV: production
-              DB_HOST: localhost
+          
+      # - name: Deploy Lambda
+      #   uses: deploy-actions/lambda-api@main
+      #   with:
+      #     Name: workflow-test
+      #     ImageUri: ${{ steps.image.outputs.uri }}
+      #     Aliases: |
+      #       - workflow.intellectus.software
+      #       - "*.workflow.intellectus.software"
+      #     HostedZoneId: Z0562300ID5KBQCHDSTV
+      #     AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
+      #     Environment: |
+      #       Variables:
+      #         NODE_ENV: production
+      #         DB_HOST: localhost
