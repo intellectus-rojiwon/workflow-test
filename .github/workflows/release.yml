@@ -39,8 +39,7 @@ jobs:
 
       - name: Docker Test
         run: |
-          docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest .
-          docker push ${{ steps.ecr.outputs.registry }}/workflow-test:latest
+          docker buildx build -t ${{ steps.ecr.outputs.registry }}/workflow-test:latest --push .
       # - name: Deploy Lambda
       #   uses: deploy-actions/lambda-api@main
       #   with:
