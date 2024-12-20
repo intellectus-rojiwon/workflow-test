@@ -18,8 +18,8 @@ jobs:
         type=gha, ref=main:builder
         type=gha, ref=main:runner
       CacheTo: |
-        type=gha, ref=main:builder, mode=layers
-        type=gha, ref=main:runner, mode=layers
+        type=gha, ref=main:builder, mode=max
+        type=gha, ref=main:runner, mode=max
 
   cd:
     runs-on: ubuntu-latest
