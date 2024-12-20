@@ -14,8 +14,12 @@ jobs:
       RepositoryName: workflow-test
       AssumeRoleArn: ${{ vars.AWS_ASSUME_ROLE_ARN }}
       AwsRegion: ${{ vars.AWS_REGION }}
-      CacheFrom: type=gha, ref=main
-      CacheTo: type=gha, mode=max, ref=main
+      CacheFrom: |
+        type=gha, ref=main:builder
+        type=gha, ref=main:runner
+      CacheTo: |
+        type=gha, ref=main:builder, mode=layers
+        type=gha, ref=main:runner, mode=layers
 
   cd:
     runs-on: ubuntu-latest
