@@ -17,9 +17,11 @@ jobs:
       CacheFrom: |
         type=gha, ref=main:builder
         type=gha, ref=main:runner
+        type=gha, ref=main
       CacheTo: |
         type=gha, ref=main:builder, mode=max
         type=gha, ref=main:runner, mode=max
+        type=gha, ref=main, mode=max
 
   cd:
     runs-on: ubuntu-latest
