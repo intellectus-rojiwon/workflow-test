@@ -11,7 +11,7 @@ jobs:
   ci:
     uses: IntellectusCorp/reusable-workflow/.github/workflows/build-push-ecr.yml@main
     with:
-      Name: workflow-test
+      RepositoryName: workflow-test
       ImageTag: latest
       AssumeRoleArn: ${{ vars.AWS_ASSUME_ROLE_ARN }}
       AwsRegion: ${{ vars.AWS_REGION }}
