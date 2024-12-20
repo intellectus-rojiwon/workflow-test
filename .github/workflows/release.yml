@@ -61,7 +61,9 @@ jobs:
 
       - name: Docker Push
         id: digest
-        run: echo "image=$(docker inspect --format '{{index .RepoDigests 0}}' ${{ steps.ecr.outputs.registry }}/workflow-test:latest)" >> "$GITHUB_OUTPUT"
+        run: |
+          docker push ${{ steps.ecr.outputs.registry }}/workflow-test:latest
+          echo "image=$(docker inspect --format '{{index .RepoDigests 0}}' ${{ steps.ecr.outputs.registry }}/workflow-test:latest)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy Lambda
         uses: deploy-actions/lambda-api@main
