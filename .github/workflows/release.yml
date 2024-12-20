@@ -63,4 +63,4 @@ jobs:
         uses: deploy-actions/lambda-api@main
         with:
           Name: workflow-test
-          ImageUri: ${{ steps.ecr.outputs.registry }}/workflow-test@${{ steps.digest.outputs.image }}
+          ImageUri: ${{ steps.digest.outputs.image }}
