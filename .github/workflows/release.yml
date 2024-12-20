@@ -15,8 +15,8 @@ jobs:
       ImageTags: latest 1.0.0, test
       AssumeRoleArn: ${{ vars.AWS_ASSUME_ROLE_ARN }}
       AwsRegion: ${{ vars.AWS_REGION }}
-      cache-from: type=gha, ref=main
-      cache-to: type=gha, mode=max, ref=main
+      CacheFrom: type=gha, ref=main
+      CacheTo: type=gha, mode=max, ref=main
 
   cd:
     runs-on: ubuntu-latest
