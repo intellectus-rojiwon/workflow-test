@@ -2,6 +2,11 @@ name: Release 🔖
 
 on:
   push:
+  workflow_dispatch:
+    inputs:
+      test:
+        type: boolean
+        default: false
 
 permissions:
   id-token: write
@@ -16,6 +21,12 @@ jobs:
   #     AwsRegion: ${{ vars.AWS_REGION }}
   #     CacheFrom: type=gha, ref=main
   #     CacheTo: type=gha, ref=main, mode=max
+  test:
+    if: ${{ inputs.test }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check
+        run: echo "hi"
 
   cd:
     runs-on: ubuntu-latest
