@@ -1,0 +1,34 @@
+name: S3 Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  s3_test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@main
+
+      - name: Configure AWS credentials 🔑
+        uses: aws-actions/configure-aws-credentials@main
+        with:
+          role-to-assume: ${{ vars.AWS_ASSUME_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: Setup S3
+        uses: deploy-actions/s3-spa@main
+        with:
+          BucketName: intellectus-rojiwon
+          Aliases: workflow.intellectus.software
+          ACMCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/ea1af974-4f4d-48de-ade6-d441f33883d0
+          HostedZoneId: Z0562300ID5KBQCHDSTV
