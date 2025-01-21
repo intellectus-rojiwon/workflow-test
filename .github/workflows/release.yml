@@ -57,15 +57,16 @@ jobs:
       - name: Docker Build Builder Stage
         uses: docker/build-push-action@v6
         with:
+          context: .
           load: true
           target: builder
-          tags: ${{ steps.ecr.outputs.registry }}/workflow-test:latest
           cache-from: type=gha, ref=main
           cache-to: type=gha, ref=main, mode=max
 
       - name: Docker Build Runner Stage
         uses: docker/build-push-action@v6
         with:
+          context: .
           load: true
           tags: ${{ steps.ecr.outputs.registry }}/workflow-test:latest
           cache-from: type=gha, ref=main
