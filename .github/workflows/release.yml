@@ -8,14 +8,6 @@ permissions:
   contents: read
 
 jobs:
-  # ci:
-  #   uses: IntellectusCorp/reusable-workflow/.github/workflows/build-push-ecr.yml@main
-  #   with:
-  #     RepositoryName: workflow-test
-  #     AssumeRoleArn: ${{ vars.AWS_ASSUME_ROLE_ARN }}
-  #     AwsRegion: ${{ vars.AWS_REGION }}
-  #     CacheFrom: type=gha, ref=main
-  #     CacheTo: type=gha, ref=main, mode=max
   test:
     if: ${{ inputs.test }}
     runs-on: ubuntu-latest
@@ -78,6 +70,9 @@ jobs:
         with:
           Name: workflow-test
           ImageUri: ${{ steps.digest.outputs.image }}
+          Aliases: test.workflow.intellectus.software
+          AcmCertificateArn: arn:aws:acm:us-east-1:525355314827:certificate/b94ac0f7-15a8-435d-8080-9b2e281d604d
+          HostedZoneId: Z0562300ID5KBQCHDSTV
 
       - name: Echo
         run: echo "${{ steps.lambda.outputs.DomainName }}"
