@@ -1,7 +1,6 @@
 name: Release 🔖
 
 on:
-  push:
   workflow_dispatch:
 
 permissions:
@@ -74,7 +73,11 @@ jobs:
           echo "image=$(docker inspect --format '{{index .RepoDigests 0}}' ${{ steps.ecr.outputs.registry }}/workflow-test:latest)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy Lambda
+        id: lambda
         uses: deploy-actions/lambda-api@main
         with:
           Name: workflow-test
           ImageUri: ${{ steps.digest.outputs.image }}
+
+      - name: Echo
+        run: echo "${{ steps.lambda.outputs.DomainName }}"
